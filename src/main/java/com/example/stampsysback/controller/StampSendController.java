@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "http://localhost:5173")
 public class StampSendController {
 
-    @PostMapping("stamp-send")
+    @PostMapping("/api/stamp-send")
     public ResponseEntity<StampSendResponse> stampSend(@RequestBody(required = false) StampSendRequest stampSendRequest){
         StampSendResponse stampSendResponse = new StampSendResponse();
         stampSendResponse.setStatus("OK");
