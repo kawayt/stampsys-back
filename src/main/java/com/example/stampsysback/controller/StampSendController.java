@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 public class StampSendController {
 
     @PostMapping("stamp-send")
-    public ResponseEntity<StampSendResponse> stampSend(@RequestBody StampSendRequest stampSendRequest){
+    public ResponseEntity<StampSendResponse> stampSend(@RequestBody(required = false) StampSendRequest stampSendRequest){
         StampSendResponse stampSendResponse = new StampSendResponse();
         stampSendResponse.setStatus("OK");
         stampSendResponse.setMessage("スタンプを送信しました。");
