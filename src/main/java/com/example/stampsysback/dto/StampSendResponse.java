@@ -10,7 +10,4 @@ import lombok.Setter;
 public class StampSendResponse {
     //スタンプが押せたことを確認するために必要
     private boolean success;
-
-    //「次のスタンプまで○○秒」の形で、スタンプ送信後に表示
-    private String message;
 }

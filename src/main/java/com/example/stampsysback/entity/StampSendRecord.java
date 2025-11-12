@@ -13,5 +13,5 @@ public class StampSendRecord {//stamp_logsテーブルに登録される情報
     private int userId;
     private int roomId;
     private int stampId;
-    private Instant sentAt = Instant.now();
+    private Instant sentAt;// サービス側 or DBでセット
 }

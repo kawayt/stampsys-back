@@ -34,3 +34,11 @@ out/
 
 ### VS Code ###
 .vscode/
+# どの階層にあっても .env を無視する
+# 応用に合わせて追加してください
+.env
+.env.local
+/.idea/workspace.xml
+/.idea/**/workspace.xml
+/target
+/build
