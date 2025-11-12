@@ -1,23 +1,24 @@
 package com.example.stampsysback.controller;
 
 import com.example.stampsysback.entity.StampManagementEntity;
+import com.example.stampsysback.mapper.StampManagementMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
-import com.example.stampsysback.mapper.StampManagementMapper;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/stamp-management")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
 public class StampManagementController {
 
     private final StampManagementMapper stampManagementMapper;
 
-    // 授業ごとのスタンプ一覧取得
-    @GetMapping("/{classId}")
-    public List<StampManagementEntity> getStamps(@PathVariable int classId) {
-        return stampManagementMapper.findByClassId(classId);
+    // スタンプ一覧取得（全件）
+    @GetMapping
+    public List<StampManagementEntity> getAllStamps() {
+        return stampManagementMapper.findAll();
     }
 
     // 新しいスタンプの追加
@@ -26,15 +27,10 @@ public class StampManagementController {
         stampManagementMapper.insert(stamp);
     }
 
-    // スタンプの更新
-    @PutMapping
-    public void updateStamp(@RequestBody StampManagementEntity stamp) {
-        stampManagementMapper.update(stamp);
-    }
-
     // スタンプの削除
-    @DeleteMapping("/{id}")
-    public void deleteStamp(@PathVariable int id) {
-        stampManagementMapper.delete(id);
+    @DeleteMapping("/{stampId}")
+    public void deleteStamp(@PathVariable int stampId) {
+        stampManagementMapper.delete(stampId);
     }
 }
+
