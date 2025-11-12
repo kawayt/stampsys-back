@@ -7,6 +7,7 @@ import com.example.stampsysback.service.StampSendService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+//POSTリクエストを受け取り、StampSendServiceを呼び出すコントローラー
 @RestController
 @RequestMapping("/api/stamp-send")
 @CrossOrigin(origins = "http://localhost:5173")
