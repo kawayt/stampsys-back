@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Users - stampsys</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #f7f7f7; }
+    </style>
+</head>
+<body>
+<h1>Users (users テーブルの中身)</h1>
+<p>合計: <span th:text="${users.size()}">0</span></p>
+<table>
+    <thead>
+    <tr>
+        <th>user_id</th>
+        <th>user_name</th>
+        <th>provider_user_id</th>
+        <th>email</th>
+        <th>role</th>
+        <th>created_at</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="u : ${users}">
+        <td th:text="${u.userId}">-</td>
+        <td th:text="${u.userName}">-</td>
+        <td th:text="${u.providerUserId}">-</td>
+        <td th:text="${u.email}">-</td>
+        <td th:text="${u.role}">-</td>
+        <td th:text="${u.createdAt}">-</td>
+    </tr>
+    <tr th:if="${users.size()} == 0">
+        <td colspan="6">データがありません</td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
