@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.stampsysback.mapper.StampManagementMapper">
+
+    <select id="findByClassId" parameterType="int" resultType="com.example.stampsysback.entity.StampManagementEntity">
+        SELECT
+            stamp_id   AS id,
+            stamp_name AS name,
+            stamp_icon AS icon,
+            stamp_color AS color,
+            class_id
+        FROM stamp
+        WHERE class_id = #{classId}
+    </select>
+
+    <insert id="insert" parameterType="com.example.stampsysback.entity.StampManagementEntity">
+        INSERT INTO stamp (class_id, stamp_name, stamp_icon, stamp_color)
+        VALUES (#{classId}, #{label}, #{icon}, #{color})
+    </insert>
+
+    <update id="update" parameterType="com.example.stampsysback.entity.StampManagementEntity">
+        UPDATE stamp
+        SET stamp_name = #{name},
+            stamp_icon = #{icon},
+            stamp_color = #{color}
+        WHERE stamp_id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="int">
+        DELETE FROM stamp WHERE stamp_id = #{id}
+    </delete>
+
+</mapper>
