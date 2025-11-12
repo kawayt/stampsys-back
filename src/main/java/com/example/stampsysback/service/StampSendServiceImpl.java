@@ -6,6 +6,8 @@ import com.example.stampsysback.mapper.StampSendRecordMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+//ビジネスロジック(DTO(StampSendRequset,StampSendResponseから、
+//Entity(StampSendRecord)を生成し、StampSendRecordMapperを呼び出す
 @Service
 public class StampSendServiceImpl implements StampSendService {
 

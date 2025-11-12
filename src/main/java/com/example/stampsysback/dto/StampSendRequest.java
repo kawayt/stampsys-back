@@ -4,9 +4,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+//スタンプを押したときに送信されるデータ
+//フロントエンドで画面上のスタンプを押したとき、誰が何のスタンプをどのルームで押したかというデータを受け取る
 @Getter
 @Setter
-public class StampSendRequest {//スタンプを押したときに送信されるデータ
+public class StampSendRequest {
     @NotNull
     private int userId;
 
