@@ -4,6 +4,7 @@ import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
@@ -68,14 +69,32 @@ public class CustomOidcUserService extends OidcUserService {
                     logger.info("Updated user id={}", existing.getUserId());
                 }, () -> {
                     logger.info("No existing user for providerId={}, creating...", providerUserId);
+
+                    // 最初のユーザーかどうか確認
+                    boolean tableEmpty = userRepository.count() == 0L;
+                    String assignedRole = tableEmpty ? "ADMIN" : "STUDENT";
+
                     User u = new User();
                     u.setProviderUserId(providerUserId);
                     u.setUserName(name != null ? name : "Unknown");
                     u.setEmail(email != null ? email : "unknown@example.com");
-                    u.setRole("STUDENT");
+                    u.setRole(assignedRole);
                     u.setCreatedAt(OffsetDateTime.now());
-                    User saved = userRepository.saveAndFlush(u);
-                    logger.info("Created user id={}", saved.getUserId());
+
+                    try {
+                        User saved = userRepository.saveAndFlush(u);
+                        logger.info("Created user id={} role={}", saved.getUserId(), saved.getRole());
+                    } catch (DataIntegrityViolationException dive) {
+                        logger.warn("Data integrity violation when creating user with assignedRole={}. Will fallback to STUDENT. cause={}",
+                                assignedRole, dive.getMessage());
+                        if ("ADMIN".equals(assignedRole)) {
+                            u.setRole("STUDENT");
+                            User savedFallback = userRepository.saveAndFlush(u);
+                            logger.info("Created user id={} role={} (fallback)", savedFallback.getUserId(), savedFallback.getRole());
+                        } else {
+                            throw dive;
+                        }
+                    }
                 });
             } catch (Exception ex) {
                 logger.error("Failed to save/update user for providerId=" + providerUserId, ex);
