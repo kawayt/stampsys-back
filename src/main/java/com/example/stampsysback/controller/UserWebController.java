@@ -7,6 +7,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
@@ -15,6 +19,8 @@ import java.util.Objects;
 
 @Controller
 public class UserWebController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserWebController.class);
 
     private final UserRepository userRepository;
     private final UserService userService;
@@ -57,7 +63,18 @@ public class UserWebController {
     // 編集は ADMIN のみ
     @PostMapping("/users/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
-    public String updateRole(@PathVariable("id") Integer id, @RequestParam("role") String role, Model model) {
+    public String updateRole(@PathVariable("id") Integer id,
+                             @RequestParam("role") String role,
+                             Model model,
+                             Authentication authentication) {
+        // デバッグ: 呼び出し時の認可情報をログ出力
+        if (authentication != null) {
+            logger.info("updateRole called by principal={}, authorities={}",
+                    authentication.getName(), authentication.getAuthorities());
+        } else {
+            logger.warn("updateRole called with null authentication");
+        }
+
         try {
             userService.updateRole(id, role);
             return "redirect:/users";

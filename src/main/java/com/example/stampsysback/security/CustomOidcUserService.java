@@ -124,6 +124,10 @@ public class CustomOidcUserService extends OidcUserService {
             mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_" + role));
         }
 
+        // デバッグ: どの authorities を返すかログ出力
+        logger.info("Returning OidcUser with authorities={} for providerUserId={}, dbRole={}",
+                mappedAuthorities, providerUserId, dbUser != null ? dbUser.getRole() : "null");
+
         // DefaultOidcUser を返すことで、セキュリティコンテキストに付与した authorities が適用される
         return new DefaultOidcUser(mappedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
     }
