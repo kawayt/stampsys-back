@@ -26,7 +26,6 @@ public class StampSendController {
     @PostMapping
     public ResponseEntity<StampSendResponse> stampSend(@RequestBody StampSendRequest stampSendRequest){
 
-        Integer userId = stampSendRequest.getUserId();
         StampSendRecord stampSendRecord = stampSendService.saveStamp(stampSendRequest.getUserId(), stampSendRequest);
 
         if (stampSendRecord != null) {
