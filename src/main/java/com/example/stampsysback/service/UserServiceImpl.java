@@ -40,6 +40,19 @@ public class UserServiceImpl implements UserService {
     public UserDto updateRole(Integer userId, String newRole) {
         User u = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+
+        // 追加: ADMIN を新たに設定しようとする場合、既存の管理者数を確認する
+        if ("ADMIN".equalsIgnoreCase(newRole)) {
+            // 既にこのユーザーが ADMIN であれば何もしない（上書きではない）
+            if (!"ADMIN".equalsIgnoreCase(u.getRole())) {
+                long adminCount = userRepository.countByRole("ADMIN");
+                if (adminCount >= 1) {
+                    // 管理者が既にいるためこれ以上追加できない（呼び出し元で捕捉して画面表示）
+                    throw new IllegalStateException("既に管理者が存在するため、管理者を追加できません。");
+                }
+            }
+        }
+
         u.setRole(newRole);
         userRepository.saveAndFlush(u);
         return toDto(u);

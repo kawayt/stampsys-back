@@ -11,4 +11,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByEmail(String email);
 
     Page<User> findByUserNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String userName, String email, Pageable pageable);
+
+    // 追加: role によるカウント（管理者が既に存在するか確認するため）
+    long countByRole(String role);
 }
