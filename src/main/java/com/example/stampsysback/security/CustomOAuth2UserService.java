@@ -4,6 +4,7 @@ import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -62,25 +63,42 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         if (providerUserId != null) {
             try {
-                // findByProviderUserId を呼ぶ（ログを出す）
                 userRepository.findByProviderUserId(providerUserId).ifPresentOrElse(existing -> {
                     logger.info("Existing user found (providerId={}), updating...", providerUserId);
                     existing.setUserName(name != null ? name : existing.getUserName());
                     existing.setEmail(email != null ? email : existing.getEmail());
-                    // saveAndFlush で即時に SQL を出す（デバッグ目的）
                     userRepository.saveAndFlush(existing);
                     logger.info("Updated user id={}", existing.getUserId());
                 }, () -> {
                     logger.info("No existing user found for providerId={}, creating new user...", providerUserId);
+
+                    // ここで最初のユーザーかどうかを判定して role を決定する
+                    boolean tableEmpty = userRepository.count() == 0L;
+                    String assignedRole = tableEmpty ? "ADMIN" : "STUDENT";
+
                     User user = new User();
                     user.setProviderUserId(providerUserId);
                     user.setUserName(name != null ? name : "Unknown");
                     user.setEmail(email != null ? email : "unknown@example.com");
-                    user.setRole("STUDENT");
+                    user.setRole(assignedRole);
                     user.setCreatedAt(OffsetDateTime.now());
-                    // saveAndFlush で INSERT を即発行
-                    User saved = userRepository.saveAndFlush(user);
-                    logger.info("Created user id={}", saved.getUserId());
+
+                    try {
+                        // INSERT を試みる
+                        User saved = userRepository.saveAndFlush(user);
+                        logger.info("Created user id={} role={}", saved.getUserId(), saved.getRole());
+                    } catch (DataIntegrityViolationException dive) {
+                        // 競合（同時に2人が空と判断して ADMIN を作ろうとした等）を想定してフォールバック
+                        logger.warn("Data integrity violation when creating user with assignedRole={}. Will fallback to STUDENT. cause={}",
+                                assignedRole, dive.getMessage());
+                        if ("ADMIN".equals(assignedRole)) {
+                            user.setRole("STUDENT");
+                            User savedFallback = userRepository.saveAndFlush(user);
+                            logger.info("Created user id={} role={} (fallback)", savedFallback.getUserId(), savedFallback.getRole());
+                        } else {
+                            throw dive; // role が STUDENT で弾かれるなら再スロー
+                        }
+                    }
                 });
             } catch (Exception ex) {
                 // 例外は必ずログを残す
