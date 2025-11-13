@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Stamp Display / Send - Debug UI</title>
+    <style>
+        body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 20px; background:#f7f9fc; color:#222 }
+        .controls { display:flex; gap:8px; align-items:center; margin-bottom:16px; }
+        input[type="number"], input[type="text"] { padding:6px 8px; font-size:14px; }
+        button { padding:8px 12px; cursor:pointer; }
+        .stamps { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+        .stamp { width:110px; height:110px; border-radius:8px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:transform .08s ease, box-shadow .08s; user-select:none; }
+        .stamp:hover { transform:translateY(-4px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
+        .stamp .icon { font-size:32px; margin-bottom:8px; }
+        .stamp .name { font-size:13px; text-align:center; padding:0 6px; }
+        .log { margin-top:18px; background:#fff; padding:12px; border-radius:6px; max-height:200px; overflow:auto; box-shadow:0 1px 3px rgba(0,0,0,0.06); font-family:monospace; font-size:13px; }
+        .small { font-size:13px; color:#666 }
+        .status { margin-left:8px; font-weight:600; }
+    </style>
+</head>
+<body>
+<h2>Stamp Display & Send — Debug UI</h2>
+
+<div class="controls">
+    <label class="small">API base:</label>
+    <input id="apiBase" type="text" value="http://localhost:8080" style="width:320px" />
+</div>
+
+<div class="controls">
+    <label class="small">roomId:</label>
+    <input id="roomId" type="number" value="1" />
+    <label class="small">userId:</label>
+    <input id="userId" type="number" value="1" />
+    <button id="loadBtn">Load Stamps</button>
+    <button id="clearBtn">Clear</button>
+    <span class="status" id="statusText"></span>
+</div>
+
+<div id="stampsContainer" class="stamps" aria-live="polite"></div>
+
+<div class="log" id="log"></div>
+
+<script>
+    // Basic debug UI for:
+    //  - GET /api/rooms/{roomId}/stamps -> expects JSON array of { stampId, stampName, stampColor, stampIcon }
+    //  - POST /api/stamp-send with JSON { userId, roomId, stampId }
+    //
+    // Behavior:
+    //  - Load stamps by roomId then render clickable tiles
+    //  - Clicking a tile will POST and show response in log
+    //  - Attempts to read CSRF token from cookies (XSRF-TOKEN or X-XSRF-TOKEN) and add X-XSRF-TOKEN header if found
+    //
+    // If your API paths differ, update the endpoints below or the server must be configured accordingly.
+
+    const loadBtn = document.getElementById('loadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const stampsContainer = document.getElementById('stampsContainer');
+    const logEl = document.getElementById('log');
+    const statusText = document.getElementById('statusText');
+
+    function log(...args) {
+        const time = new Date().toISOString().replace('T',' ').replace('Z','');
+        logEl.textContent = `${time}  ${args.map(a => (typeof a==='object'? JSON.stringify(a): String(a))).join(' ')}\n` + logEl.textContent;
+    }
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return v ? decodeURIComponent(v.pop()) : null;
+    }
+
+    function getCsrfHeader() {
+        // Try common cookie names
+        const token = getCookie('XSRF-TOKEN') || getCookie('X-XSRF-TOKEN') || getCookie('csrf-token');
+        if (token) return { 'X-XSRF-TOKEN': token };
+        return {};
+    }
+
+    async function loadStamps() {
+        stampsContainer.innerHTML = '';
+        statusText.textContent = 'Loading...';
+        const API_BASE = document.getElementById('apiBase').value.replace(/\/$/, '');
+        const roomId = Number(document.getElementById('roomId').value);
+        if (!roomId) { statusText.textContent = 'roomId required'; return; }
+
+        const url = `${API_BASE}/api/rooms/${encodeURIComponent(roomId)}/stamps`;
+        log('GET', url);
+        try {
+            const res = await fetch(url, { method: 'GET', credentials: 'include' });
+            if (!res.ok) {
+                const text = await res.text();
+                statusText.textContent = `GET error ${res.status}`;
+                log('GET error', res.status, text);
+                return;
+            }
+            const stamps = await res.json();
+            if (!Array.isArray(stamps)) {
+                statusText.textContent = 'Unexpected response';
+                log('Unexpected response:', stamps);
+                return;
+            }
+            renderStamps(stamps);
+            statusText.textContent = `Loaded ${stamps.length} stamps`;
+            log('Loaded stamps:', stamps);
+        } catch (e) {
+            statusText.textContent = 'Network error';
+            log('Network error', e);
+        }
+    }
+
+    function renderStamps(stamps) {
+        stampsContainer.innerHTML = '';
+        if (stamps.length === 0) {
+            stampsContainer.textContent = 'No stamps for this room';
+            return;
+        }
+        stamps.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'stamp';
+            // If stampIcon looks like an emoji or short text, use it; otherwise use fallback circle with color
+            const iconEl = document.createElement('div');
+            iconEl.className = 'icon';
+            if (s.stampIcon && (s.stampIcon.length <= 3 || /emoji/i.test(s.stampIcon))) {
+                iconEl.textContent = s.stampIcon;
+            } else if (s.stampIcon && s.stampIcon.startsWith('data:')) {
+                // base64 inline image
+                const img = document.createElement('img');
+                img.src = s.stampIcon;
+                img.style.width = '48px';
+                img.style.height = '48px';
+                img.style.objectFit = 'contain';
+                iconEl.appendChild(img);
+            } else {
+                // fallback: colored circle with stampId text
+                const circle = document.createElement('div');
+                circle.style.width = '48px';
+                circle.style.height = '48px';
+                circle.style.borderRadius = '50%';
+                circle.style.background = s.stampColor || '#ddd';
+                circle.style.display = 'flex';
+                circle.style.alignItems = 'center';
+                circle.style.justifyContent = 'center';
+                circle.style.color = '#fff';
+                circle.style.fontWeight = '700';
+                circle.textContent = s.stampId ?? '?';
+                iconEl.appendChild(circle);
+            }
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'name';
+            nameEl.textContent = s.stampName || `stamp ${s.stampId}`;
+
+            div.appendChild(iconEl);
+            div.appendChild(nameEl);
+
+            // click -> send stamp
+            div.addEventListener('click', () => sendStamp(s.stampId));
+
+            stampsContainer.appendChild(div);
+        });
+    }
+
+    async function sendStamp(stampId) {
+        const API_BASE = document.getElementById('apiBase').value.replace(/\/$/, '');
+        const roomId = Number(document.getElementById('roomId').value);
+        const userId = Number(document.getElementById('userId').value);
+        if (!roomId || !userId) {
+            alert('roomId and userId are required');
+            return;
+        }
+        const payload = { userId, roomId, stampId };
+        const url = `${API_BASE}/api/stamp-send`;
+        const headers = { 'Content-Type': 'application/json', ...getCsrfHeader() };
+        log('POST', url, payload, headers);
+        statusText.textContent = 'Sending...';
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                credentials: 'include',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            const contentType = res.headers.get('content-type') || '';
+            let body = null;
+            if (contentType.includes('application/json')) {
+                body = await res.json();
+            } else {
+                body = await res.text();
+            }
+            if (!res.ok) {
+                statusText.textContent = `Send error ${res.status}`;
+                log('POST error', res.status, body);
+                alert('Send failed: ' + (body && typeof body === 'string' ? body : JSON.stringify(body)));
+                return;
+            }
+            statusText.textContent = `Sent stamp ${stampId}`;
+            log('POST success', res.status, body);
+            // Optionally update UI: show a temporary highlight or append log
+            // Optionally refresh stamps or recent logs (not done here)
+        } catch (e) {
+            statusText.textContent = 'Network error';
+            log('Network error', e);
+            alert('Network error: ' + e);
+        }
+    }
+
+    loadBtn.addEventListener('click', loadStamps);
+    clearBtn.addEventListener('click', () => { stampsContainer.innerHTML=''; logEl.textContent=''; statusText.textContent=''; });
+
+    // Auto-load on page open (optional)
+    // window.addEventListener('load', loadStamps);
+</script>
+</body>
+</html>

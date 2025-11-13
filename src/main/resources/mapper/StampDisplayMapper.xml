@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stampsysback.mapper.StampDisplayMapper">
+
+    <!-- rooms -> class_id -> stamps_classes -> stamps を辿る（room が単一の class_id を持つ前提） -->
+    <select id="findStampsByRoomId" parameterType="int" resultType="com.example.stampsysback.dto.StampDto">
+        SELECT s.stamp_id   AS stampId,
+               s.stamp_name AS stampName,
+               s.stamp_color AS stampColor,
+               s.stamp_icon  AS stampIcon
+        FROM stamps s
+                 JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
+                 JOIN rooms r ON sc.class_id = r.class_id
+        WHERE r.room_id = #{roomId}
+        ORDER BY s.stamp_id
+    </select>
+
+    <!-- classId から直接取得する場合 -->
+    <select id="findStampsByClassId" parameterType="int" resultType="com.example.stampsysback.dto.StampDto">
+        SELECT s.stamp_id   AS stampId,
+               s.stamp_name AS stampName,
+               s.stamp_color AS stampColor,
+               s.stamp_icon  AS stampIcon
+        FROM stamps s
+                 JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
+        WHERE sc.class_id = #{classId}
+        ORDER BY s.stamp_id
+    </select>
+
+</mapper>

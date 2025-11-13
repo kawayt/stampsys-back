@@ -21,7 +21,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                     // 以下のパスは認証なしでアクセス可能
-                    .requestMatchers("/", "/login**", "/error", "/actuator/**", "/api/test-create", "/api/stamp-send").permitAll()
+                    .requestMatchers("/", "/login**", "/error", "/actuator/**", "/api/test-create", "/api/stamp-send", "/api/rooms/{roomId}/stamps)").permitAll()
                     .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
