@@ -7,8 +7,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.List;
+import java.util.Objects;
 
 @Controller
 public class UserWebController {
@@ -21,24 +24,63 @@ public class UserWebController {
         this.userService = userService;
     }
 
+    // 閲覧は認証済みユーザーなら誰でも可能（@PreAuthorize を外す）
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')") // ADMIN のみアクセス可能
-    public String listUsers(Model model) {
+    public String listUsers(@AuthenticationPrincipal OAuth2User principal, Model model) {
         List<User> users = userRepository.findAll();
         model.addAttribute("users", users);
-        return "app";
+
+        // OAuth2 attributes（テンプレートで参照したい場合）
+        if (principal != null) {
+            model.addAttribute("attributes", principal.getAttributes());
+        }
+
+        // 現在ログインしているユーザーの DB 上の User を model に追加（テンプレートで role 判定・表示のため）
+        if (principal != null) {
+            Object subObj = principal.getAttribute("sub");
+            Object oidObj = principal.getAttribute("oid");
+            Object idObj = principal.getAttribute("id");
+            String providerId = firstNonNullString(subObj, oidObj, idObj);
+            if (providerId != null) {
+                userRepository.findByProviderUserId(providerId).ifPresent(u -> model.addAttribute("user", u));
+            } else {
+                String email = firstNonNullString(principal.getAttribute("email"));
+                if (email != null) {
+                    userRepository.findByEmail(email).ifPresent(u -> model.addAttribute("user", u));
+                }
+            }
+        }
+
+        return "app"; // templates/app.html を返す
     }
 
+    // 編集は ADMIN のみ
     @PostMapping("/users/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public String updateRole(@PathVariable("id") Integer id, @RequestParam("role") String role, Model model) {
-        userService.updateRole(id, role);
-        return "redirect:/users";
+        try {
+            userService.updateRole(id, role);
+            return "redirect:/users";
+        } catch (IllegalStateException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            model.addAttribute("targetUserId", id);
+            model.addAttribute("requestedRole", role);
+            return "admin_exists";
+        }
     }
 
     @GetMapping("/users/admins/count")
     @ResponseBody
     public Long adminCount() {
         return userRepository.countByRole("ADMIN");
+    }
+
+    private static String firstNonNullString(Object... objs) {
+        for (Object o : objs) {
+            if (o != null) {
+                return Objects.toString(o, null);
+            }
+        }
+        return null;
     }
 }

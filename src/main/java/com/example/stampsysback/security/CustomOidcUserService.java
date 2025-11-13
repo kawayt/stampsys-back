@@ -5,20 +5,24 @@ import com.example.stampsysback.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * OIDC 用のカスタムユーザーサービス。
  * OIDC の認証フローで呼ばれ、DB への保存／更新処理をここで行う。
+ * さらに、DB に保存された role を GrantedAuthority として返すようにする。
  */
 @Service
 public class CustomOidcUserService extends OidcUserService {
@@ -61,6 +65,7 @@ public class CustomOidcUserService extends OidcUserService {
 
         if (providerUserId != null) {
             try {
+                // DB に存在すれば更新、なければ作成する
                 userRepository.findByProviderUserId(providerUserId).ifPresentOrElse(existing -> {
                     logger.info("Existing user found (providerId={}), updating...", providerUserId);
                     existing.setUserName(name != null ? name : existing.getUserName());
@@ -103,7 +108,23 @@ public class CustomOidcUserService extends OidcUserService {
             logger.warn("No provider user id found in OIDC claims: {}", claims.keySet());
         }
 
-        // 元の OidcUser をそのまま返す（または必要に応じて権限を加工して返す）
-        return oidcUser;
+        // DB 側の role を取得（存在すれば）
+        User dbUser = null;
+        if (providerUserId != null) {
+            dbUser = userRepository.findByProviderUserId(providerUserId).orElse(null);
+        } else if (email != null) {
+            dbUser = userRepository.findByEmail(email).orElse(null);
+        }
+
+        // 既存の authorities を引き継ぎつつ、DB の role を ROLE_<ROLE> 形式で追加する
+        Set<GrantedAuthority> mappedAuthorities = new HashSet<>(oidcUser.getAuthorities());
+        if (dbUser != null && dbUser.getRole() != null && !dbUser.getRole().isBlank()) {
+            String role = dbUser.getRole().trim();
+            // Spring Security の hasRole('X') は内部で "ROLE_X" を期待するためプレフィックスを付与
+            mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        }
+
+        // DefaultOidcUser を返すことで、セキュリティコンテキストに付与した authorities が適用される
+        return new DefaultOidcUser(mappedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
     }
 }
