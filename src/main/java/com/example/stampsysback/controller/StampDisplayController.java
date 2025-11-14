@@ -26,6 +26,7 @@ public class StampDisplayController {
      */
     @GetMapping("/rooms/{roomId}/stamps")
     public ResponseEntity<List<StampDto>> getStampsByRoom(@PathVariable Integer roomId) {
+        //stampsに、StampDisplayService.javaで返したstamp_id,stamp_name,stamp_color,stamp_iconを代入する
         List<StampDto> stamps = stampDisplayService.findStampsByRoomId(roomId);
         return ResponseEntity.ok(stamps);
     }
