@@ -8,17 +8,19 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * OIDC 用のカスタムユーザーサービス。
- * OIDC の認証フローで呼ばれ、DB への保存／更新処理をここで行う。
+ * OIDC の認証フローで呼ばれ、DB への保存／更新処理および GrantedAuthority の付与を行う。
  */
 @Service
 public class CustomOidcUserService extends OidcUserService {
@@ -59,51 +61,67 @@ public class CustomOidcUserService extends OidcUserService {
 
         logger.info("Determined name={}, email={}", name, email);
 
-        if (providerUserId != null) {
-            try {
+        // DB の create/update 処理（既存ロジックを維持）
+        try {
+            final String finalProviderUserId = providerUserId;
+            if (providerUserId != null) {
                 userRepository.findByProviderUserId(providerUserId).ifPresentOrElse(existing -> {
-                    logger.info("Existing user found (providerId={}), updating...", providerUserId);
+                    logger.info("Existing user found (providerId={}), updating...", finalProviderUserId);
                     existing.setUserName(name != null ? name : existing.getUserName());
                     existing.setEmail(email != null ? email : existing.getEmail());
                     userRepository.saveAndFlush(existing);
                     logger.info("Updated user id={}", existing.getUserId());
                 }, () -> {
-                    logger.info("No existing user for providerId={}, creating...", providerUserId);
+                    logger.info("No existing user for providerId={}, creating...", finalProviderUserId);
 
                     // 最初のユーザーかどうか確認
                     boolean tableEmpty = userRepository.count() == 0L;
                     String assignedRole = tableEmpty ? "ADMIN" : "STUDENT";
 
                     User u = new User();
-                    u.setProviderUserId(providerUserId);
+                    u.setProviderUserId(finalProviderUserId);
                     u.setUserName(name != null ? name : "Unknown");
                     u.setEmail(email != null ? email : "unknown@example.com");
                     u.setRole(assignedRole);
                     u.setCreatedAt(OffsetDateTime.now());
 
                     try {
-                        User saved = userRepository.saveAndFlush(u);
-                        logger.info("Created user id={} role={}", saved.getUserId(), saved.getRole());
-                    } catch (DataIntegrityViolationException dive) {
-                        logger.warn("Data integrity violation when creating user with assignedRole={}. Will fallback to STUDENT. cause={}",
-                                assignedRole, dive.getMessage());
-                        if ("ADMIN".equals(assignedRole)) {
-                            u.setRole("STUDENT");
-                            User savedFallback = userRepository.saveAndFlush(u);
-                            logger.info("Created user id={} role={} (fallback)", savedFallback.getUserId(), savedFallback.getRole());
-                        } else {
-                            throw dive;
-                        }
+                        userRepository.saveAndFlush(u);
+                        logger.info("Created new user id={}", u.getUserId());
+                    } catch (DataIntegrityViolationException ex) {
+                        logger.warn("Failed to create user (possible duplicate), ignoring", ex);
                     }
                 });
-            } catch (Exception ex) {
-                logger.error("Failed to save/update user for providerId=" + providerUserId, ex);
             }
-        } else {
-            logger.warn("No provider user id found in OIDC claims: {}", claims.keySet());
+        } catch (Exception ex) {
+            logger.warn("Failed to create/update DB user from OIDC claims", ex);
         }
 
-        // 元の OidcUser をそのまま返す（または必要に応じて権限を加工して返す）
-        return oidcUser;
+        // 最後に DB 上の role を参照して GrantedAuthority を作成する（ここが重要）
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER")); // デフォルトロール
+
+        try {
+            com.example.stampsysback.model.User dbUser = null;
+            if (providerUserId != null) {
+                dbUser = userRepository.findByProviderUserId(providerUserId).orElse(null);
+            }
+            if (dbUser == null && email != null && !email.isBlank()) {
+                dbUser = userRepository.findByEmail(email).orElse(null);
+            }
+
+            if (dbUser != null && "ADMIN".equals(dbUser.getRole())) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            }
+        } catch (Exception ex) {
+            logger.warn("Failed to load DB user for authority mapping", ex);
+        }
+
+        // nameAttributeKey を決める（sub/oid/id の優先）
+        String nameAttributeKey = claims.containsKey("sub") ? "sub" :
+                (claims.containsKey("oid") ? "oid" : (claims.containsKey("id") ? "id" : "sub"));
+
+        // DefaultOidcUser を返し、SecurityContext に上で作った authorities が反映されるようにする
+        return new DefaultOidcUser(authorities, oidcUser.getIdToken(), oidcUser.getUserInfo(), nameAttributeKey);
     }
 }
