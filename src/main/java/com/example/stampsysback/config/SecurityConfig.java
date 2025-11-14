@@ -6,6 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableMethodSecurity // メソッドレベルの @PreAuthorize を使う場合に必要
@@ -20,6 +25,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // 認証不要なパス
@@ -33,10 +39,36 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .oidcUserService(customOidcUserService)
                         )
-                        .defaultSuccessUrl("/app", true)
+                        .defaultSuccessUrl("http://localhost:5173", true)
                 )
                 .logout(logout -> logout.logoutSuccessUrl("/").permitAll());
 
         return http.build();
+    }
+
+    // CORS 設定
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        // フロントエンドのオリジンを許可
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+
+        // 認証付きリクエストを許可
+        config.setAllowCredentials(true);
+
+        // 許可するメソッド
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // 許可するヘッダ
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        // 必要ならレスポンスヘッダの露出設定も可能
+        // config.setExposedHeaders(List.of("Authorization"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // 全パスに上記設定を適用
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
