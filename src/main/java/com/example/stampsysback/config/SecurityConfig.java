@@ -23,9 +23,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // 認証不要なパス
-                        .requestMatchers("/", "/login**", "/error", "/actuator/**", "/api/test-create", "/api/stamp-send").permitAll()
-                        // ユーザー一覧を ADMIN のみ許可
-                        .requestMatchers("/users", "/users/**", "/api/users/**", "/users/admins/count").hasRole("ADMIN")
+                        .requestMatchers("/", "/login**", "/error", "/users", "/users/**", "/api/users/**", "/users/admins/count", "/actuator/**", "/api/test-create", "/api/stamp-send", "/api/users").permitAll()
+
                         // それ以外は認証を要求
                         .anyRequest().authenticated()
                 )

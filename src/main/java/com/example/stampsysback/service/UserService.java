@@ -1,9 +1,9 @@
 package com.example.stampsysback.service;
 
 import com.example.stampsysback.dto.UserDto;
-import org.springframework.data.domain.Page;
+import java.util.List;
 
 public interface UserService {
-    Page<UserDto> listUsers(int page, int size, String sortBy, String direction, String q);
+    List<UserDto> listUsers(String q);
     UserDto updateRole(Integer userId, String newRole);
 }

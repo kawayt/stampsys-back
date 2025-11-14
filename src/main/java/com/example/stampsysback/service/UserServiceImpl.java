@@ -4,9 +4,12 @@ import com.example.stampsysback.dto.UserDto;
 import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -23,16 +26,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<UserDto> listUsers(int page, int size, String sortBy, String direction, String q) {
-        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<User> p;
+    public List<UserDto> listUsers(String q) {
+        Sort sort = Sort.by(Sort.Direction.ASC, "userName");
+        List<User> users;
         if (q == null || q.isBlank()) {
-            p = userRepository.findAll(pageable);
+            users = userRepository.findAll(sort);
         } else {
-            p = userRepository.findByUserNameContainingIgnoreCaseOrEmailContainingIgnoreCase(q, q, pageable);
+            users = userRepository.findByUserNameContainingIgnoreCaseOrEmailContainingIgnoreCase(q, q, 
+                    org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE, sort))
+                    .getContent();
         }
-        return p.map(this::toDto);
+        return users.stream().map(this::toDto).collect(Collectors.toList());
     }
 
     @Override

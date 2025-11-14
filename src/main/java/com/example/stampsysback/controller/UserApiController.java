@@ -3,11 +3,13 @@ package com.example.stampsysback.controller;
 import com.example.stampsysback.dto.UserDto;
 import com.example.stampsysback.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@CrossOrigin(origins = "http://localhost:5173")
 public class UserApiController {
 
     private final UserService userService;
@@ -18,14 +20,8 @@ public class UserApiController {
     }
 
     @GetMapping
-    public Page<UserDto> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "userName") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction,
-            @RequestParam(required = false) String q
-    ) {
-        return userService.listUsers(page, size, sortBy, direction, q);
+    public List<UserDto> list(@RequestParam(required = false) String q) {
+        return (List<UserDto>) userService.listUsers(q);
     }
 
     @PutMapping("/{id}/role")
