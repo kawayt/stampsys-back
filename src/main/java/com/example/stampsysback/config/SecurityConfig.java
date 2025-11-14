@@ -56,6 +56,7 @@ public class SecurityConfig {
         // CSRF はデフォルトで有効。fetch を使う場合はフロントでXSRFトークン送付が必要。
         ;
 
+
         return http.build();
     }
 
