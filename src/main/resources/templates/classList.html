@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>クラス一覧</title>
+</head>
+<body>
+<h2>クラス一覧</h2>
+
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>クラス名</th>
+        <th>作成日</th>
+    </tr>
+    <tr th:each="c : ${classes}">
+        <td th:text="${c.classId}"></td>
+        <td th:text="${c.className}"></td>
+        <td th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+    </tr>
+</table>
+
+</body>
+</html>

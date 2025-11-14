@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stampsysback.mapper.ClassMapper">
+    <!-- クラス一覧を取得 -->
+    <select id="selectAll" resultType="com.example.stampsysback.entity.ClassEntity">
+        SELECT class_id, class_name, created_at FROM classes ORDER BY class_id;
+    </select>
+
+    <!-- クラス作成 -->
+    <insert id="insert">
+        INSERT INTO classes (class_id, class_name, created_at)
+        VALUES (#{classId}, #{className}, #{createdAt});
+    </insert>
+
+    <select id="selectMaxId" resultType="int">
+        SELECT COALESCE(MAX(class_id), 0) FROM classes;
+    </select>
+</mapper>
