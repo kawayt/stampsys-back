@@ -13,7 +13,7 @@
       - 出力：stampId, stampName, cnt, pct
     -->
 
-    <select id="findLatestStampDistributionByRoomId" resultType="com.example.stampsysback.dto.StampSummary" parameterType="Long">
+    <select id="findLatestStampDistributionByRoomId" resultType="com.example.stampsysback.dto.StampSummary">
         WITH participants AS (
             SELECT uc.user_id
             FROM rooms r
