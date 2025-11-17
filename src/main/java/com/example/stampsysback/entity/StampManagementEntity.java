@@ -6,6 +6,6 @@ import lombok.Data;
 public class StampManagementEntity {
     private Integer stampId;     // 主キー
     private String stampName;
-    private String stampIcon;
-    private String stampColor;
+    private Integer stampIcon;  // 変更後 (DBの icon_id カラムに対応)
+    private Integer stampColor; // 変更後 (DBの color_id カラムに対応)
 }

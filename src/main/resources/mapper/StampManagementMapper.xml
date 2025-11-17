@@ -10,18 +10,18 @@
             stamp_name AS stampName,
             stamp_icon AS stampIcon,
             stamp_color AS stampColor
-        FROM stamp
+        FROM stamps
     </select>
 
     <!-- 新しいスタンプ追加 -->
     <insert id="insert" parameterType="com.example.stampsysback.entity.StampManagementEntity">
-        INSERT INTO stamp (stamp_name, stamp_icon, stamp_color)
+        INSERT INTO stamps (stamp_name, stamp_icon, stamp_color)
         VALUES (#{stampName}, #{stampIcon}, #{stampColor})
     </insert>
 
     <!-- スタンプ削除 -->
     <delete id="delete" parameterType="int">
-        DELETE FROM stamp WHERE stamp_id = #{stampId}
+        DELETE FROM stamps WHERE stamp_id = #{stampId}
     </delete>
 
 </mapper>

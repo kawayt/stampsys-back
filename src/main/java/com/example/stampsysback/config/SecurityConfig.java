@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // 認証不要なパス
-                        .requestMatchers("/", "/login**", "/error", "/users", "/users/**", "/api/users/**", "/users/admins/count", "/actuator/**", "/api/test-create", "/api/stamp-send", "/api/users", "/api/rooms/*/stamp-summary").permitAll()
+                        .requestMatchers("/", "/login**", "/error", "/users", "/users/**", "/api/users/**", "/users/admins/count", "/actuator/**", "/api/test-create", "/api/stamp-send", "/api/users", "/api/rooms/*/stamp-summary", "/api/stamp-management/**").permitAll()
 
                         // それ以外は認証を要求
                         .anyRequest().authenticated()
