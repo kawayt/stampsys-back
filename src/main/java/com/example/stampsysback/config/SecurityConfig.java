@@ -13,7 +13,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpMethod;
 
 import java.util.List;
 
@@ -34,7 +33,22 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // 認証不要なパス
-                        .requestMatchers(HttpMethod.GET,"/", "/login**", "/error", "/users", "/users/**", "/api/users/**", "/users/admins/count", "/actuator/**", "/api/test-create", "/api/stamp-send", "/api/users", "/api/rooms/*/stamp-summary", "/api/stamp-management/**", "/api/rooms/*/stamp-activity").permitAll()
+                        .requestMatchers(
+                                "/",
+                                "/login**",
+                                "/error",
+                                "/users",
+                                "/users/**",
+                                "/api/users/**",
+                                "/users/admins/count",
+                                "/actuator/**",
+                                "/api/test-create",
+                                "/api/stamp-send",
+                                "/api/users",
+                                "/api/rooms/*/stamp-summary",
+                                "/api/stamp-management/**",
+                                "/api/rooms/*/stamp-activity"
+                        ).permitAll()
 
                         // それ以外は認証を要求
                         .anyRequest().authenticated()
