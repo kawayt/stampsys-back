@@ -6,9 +6,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 
@@ -41,9 +45,48 @@ public class SecurityConfig {
                         )
                         .defaultSuccessUrl("http://localhost:5173", true)
                 )
-                .logout(logout -> logout.logoutSuccessUrl("/").permitAll());
+                .logout(logout -> logout
+                        // 任意: サーバセッションを無効化
+                        .invalidateHttpSession(true)
+                        // 任意: SecurityContext をクリア
+                        .clearAuthentication(true)
+                        // 任意: JSESSIONID などの Cookie を削除
+                        .deleteCookies("JSESSIONID")
+                        // ログアウト成功時の挙動をカスタム
+                        .logoutSuccessHandler(reactRedirectLogoutSuccessHandler())
+                );
 
         return http.build();
+    }
+
+    /**
+     * ログアウト完了後に React フロントのログイン画面へリダイレクトするハンドラ
+     */
+    @Bean
+    public LogoutSuccessHandler reactRedirectLogoutSuccessHandler() {
+        return (request, response, authentication) -> {
+            // 必要ならここで追加の Cookie を削除
+            clearCookie("XSRF-TOKEN", request, response);
+            clearCookie("X-XSRF-TOKEN", request, response);
+
+            // React アプリのログインページまたはトップへリダイレクト
+            response.setStatus(HttpServletResponse.SC_FOUND);
+            response.setHeader("Location", "http://localhost:5173/login");
+        };
+    }
+
+    private void clearCookie(String name, HttpServletRequest request, HttpServletResponse response) {
+        if (request.getCookies() == null) return;
+        for (Cookie c : request.getCookies()) {
+            if (name.equals(c.getName())) {
+                Cookie cookie = new Cookie(name, "");
+                cookie.setPath("/");
+                cookie.setMaxAge(0);
+                cookie.setHttpOnly(c.isHttpOnly());
+                cookie.setSecure(c.getSecure());
+                response.addCookie(cookie);
+            }
+        }
     }
 
     // CORS 設定
