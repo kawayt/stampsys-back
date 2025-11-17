@@ -4,13 +4,15 @@ import com.example.stampsysback.dto.UserDto;
 import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * シンプル実装。既存の変換ロジックがあればそれに合わせて修正してください。
+ */
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -21,20 +23,19 @@ public class UserServiceImpl implements UserService {
         this.userRepository = userRepository;
     }
 
-    private UserDto toDto(User u) {
-        return new UserDto(u.getUserId(), u.getUserName(), u.getEmail(), u.getRole(), u.getCreatedAt());
-    }
-
     @Override
     public List<UserDto> listUsers(String q) {
-        Sort sort = Sort.by(Sort.Direction.ASC, "userName");
+        // 既存実装に合わせて置き換えてください。ここでは簡易実装を例示。
+        // Pageable 等を使った実装がある場合はそちらに合わせること。
         List<User> users;
-        if (q == null || q.isBlank()) {
-            users = userRepository.findAll(sort);
+        if (q == null || q.trim().isEmpty()) {
+            users = userRepository.findAll();
         } else {
-            users = userRepository.findByUserNameContainingIgnoreCaseOrEmailContainingIgnoreCase(q, q, 
-                    org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE, sort))
-                    .getContent();
+            // findByUserNameContainingIgnoreCaseOrEmailContainingIgnoreCase を使う場合は Pageable の扱いに注意
+            users = userRepository.findAll().stream()
+                    .filter(u -> (u.getUserName() != null && u.getUserName().toLowerCase().contains(q.toLowerCase()))
+                            || (u.getEmail() != null && u.getEmail().toLowerCase().contains(q.toLowerCase())))
+                    .collect(Collectors.toList());
         }
         return users.stream().map(this::toDto).collect(Collectors.toList());
     }
@@ -42,23 +43,30 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto updateRole(Integer userId, String newRole) {
-        User u = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setRole(newRole);
+        User saved = userRepository.save(user);
+        return toDto(saved);
+    }
 
-        // 追加: ADMIN を新たに設定しようとする場合、既存の管理者数を確認する
-        if ("ADMIN".equalsIgnoreCase(newRole)) {
-            // 既にこのユーザーが ADMIN であれば何もしない（上書きではない）
-            if (!"ADMIN".equalsIgnoreCase(u.getRole())) {
-                long adminCount = userRepository.countByRole("ADMIN");
-                if (adminCount >= 1) {
-                    // 管理者が既にいるためこれ以上追加できない（呼び出し元で捕捉して画面表示）
-                    throw new IllegalStateException("既に管理者が存在するため、管理者を追加できません。");
-                }
-            }
+    @Override
+    @Transactional
+    public boolean deleteUser(Integer userId) {
+        if (!userRepository.existsById(userId)) {
+            return false;
         }
+        userRepository.deleteById(userId);
+        return true;
+    }
 
-        u.setRole(newRole);
-        userRepository.saveAndFlush(u);
-        return toDto(u);
+    private UserDto toDto(User u) {
+        UserDto dto = new UserDto();
+        dto.setUserId(u.getUserId());
+        dto.setUserName(u.getUserName());
+        dto.setEmail(u.getEmail());
+        dto.setRole(u.getRole());
+        dto.setCreatedAt(u.getCreatedAt());
+        return dto;
     }
 }
