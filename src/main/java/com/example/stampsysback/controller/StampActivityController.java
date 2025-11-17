@@ -9,9 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
 import java.util.Set;
 
-/**
+/*
  * Controller exposing stamp activity endpoint.
- *
  * GET /api/rooms/{roomId}/stamp-activity?interval=5 minutes&start=...&end=...
  */
 @RestController

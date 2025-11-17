@@ -15,10 +15,8 @@ import java.util.stream.Collectors;
 
 /**
  * Service implementation that pivots flat mapper output into timeline + aligned series.
- *
  * Relies on StampActivityMapper.findBucketedStampCounts to return rows with:
  *   ts (timestamp), stampId (int), cnt (int), total_cnt (int), pct (numeric)
- *
  * Also queries stamps table to attach stamp metadata.
  */
 @Service

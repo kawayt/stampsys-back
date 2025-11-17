@@ -1,5 +1,8 @@
 package com.example.stampsysback.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -11,17 +14,11 @@ import java.util.List;
  *   series: [ StampSeries, ... ]
  * }
  */
+
+@Getter
+@Setter
 public class StampActivityResponse {
     private List<OffsetDateTime> timeline;
     private List<Integer> totals;
     private List<StampSeries> series;
-
-    public List<OffsetDateTime> getTimeline() { return timeline; }
-    public void setTimeline(List<OffsetDateTime> timeline) { this.timeline = timeline; }
-
-    public List<Integer> getTotals() { return totals; }
-    public void setTotals(List<Integer> totals) { this.totals = totals; }
-
-    public List<StampSeries> getSeries() { return series; }
-    public void setSeries(List<StampSeries> series) { this.series = series; }
 }
