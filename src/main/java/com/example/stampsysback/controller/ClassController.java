@@ -16,6 +16,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/classes")
+@CrossOrigin(origins = "http://localhost:5173")
 public class ClassController {
     // DI サービスに依存
     private final ClassService classService;
