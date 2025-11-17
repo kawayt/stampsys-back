@@ -1,88 +1,74 @@
 package com.example.stampsysback.config;
 
+import com.example.stampsysback.security.CustomOidcUserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
+@EnableMethodSecurity // メソッドレベルの @PreAuthorize を使う場合に必要
 public class SecurityConfig {
 
-    // SecurityFilterChain の設定
+    private final CustomOidcUserService customOidcUserService;
+
+    public SecurityConfig(CustomOidcUserService customOidcUserService) {
+        this.customOidcUserService = customOidcUserService;
+    }
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository clientRegistrationRepository) throws Exception {
-
-        // ログイン成功後に常にフロントを表示するハンドラを作る
-        SimpleUrlAuthenticationSuccessHandler successHandler = new SimpleUrlAuthenticationSuccessHandler();
-        // フロントの URL に変更してください（例: http://localhost:5173/）
-        successHandler.setDefaultTargetUrl("http://localhost:5173/");
-        // 常に default を使う（保存されたリクエストを無視する）
-        successHandler.setAlwaysUseDefaultTargetUrl(true);
-
-        // OIDC logout handler (post logout redirect は別に設定している想定)
-        OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
-                new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
-        oidcLogoutSuccessHandler.setPostLogoutRedirectUri("http://localhost:5173/logged-out");
-
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CORS を有効化（下で CorsFilter を登録しているため、ここは有効のままでOK）
-                .cors()
-                .and()
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll()
+                        // 認証不要なパス
+                        .requestMatchers("/", "/login**", "/error", "/users", "/users/**", "/api/users/**", "/users/admins/count", "/actuator/**", "/api/test-create", "/api/stamp-send", "/api/users", "/api/rooms/*/stamp-summary").permitAll()
+
+                        // それ以外は認証を要求
+                        .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .successHandler(successHandler)
+                        .loginPage("/oauth2/authorization/microsoft")
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .oidcUserService(customOidcUserService)
+                        )
+                        .defaultSuccessUrl("http://localhost:5173", true)
                 )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessHandler(oidcLogoutSuccessHandler)
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
-                )
-        // CSRF はデフォルトで有効。fetch を使う場合はフロントでXSRFトークン送付が必要。
-        ;
-
+                .logout(logout -> logout.logoutSuccessUrl("/").permitAll());
 
         return http.build();
     }
 
-    // CORS 設定ソース（必要に応じてこちらを使う）
+    // CORS 設定
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // 明示的にフロントの origin を指定する（ワイルドカード不可 when allowCredentials=true）
+
+        // フロントエンドのオリジンを許可
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+
+        // 認証付きリクエストを許可
         config.setAllowCredentials(true);
-        config.setExposedHeaders(List.of("Location"));
+
+        // 許可するメソッド
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // 許可するヘッダ
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        // 必要ならレスポンスヘッダの露出設定も可能
+        // config.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // 全パスに上記設定を適用
         source.registerCorsConfiguration("/**", config);
         return source;
-    }
-
-    // グローバルな CorsFilter を登録して、プリフライトと実レスポンス両方で必ず正しいヘッダが返るようにする（開発環境向け）
-    @Bean
-    public FilterRegistrationBean<CorsFilter> corsFilterRegistrationBean(CorsConfigurationSource corsConfigurationSource) {
-        CorsFilter corsFilter = new CorsFilter((UrlBasedCorsConfigurationSource) corsConfigurationSource);
-        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(corsFilter);
-        // 高い優先度で実行（セキュリティフィルタの前に CORS ヘッダを追加）
-        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        return bean;
     }
 }
