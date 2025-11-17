@@ -1,6 +1,7 @@
 package com.example.stampsysback.service;
 
 import com.example.stampsysback.dto.UserDto;
+import com.example.stampsysback.dto.UserCountsDto;
 import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,16 +26,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> listUsers(String q) {
-        // 既存実装に合わせて置き換えてください。ここでは簡易実装を例示。
-        // Pageable 等を使った実装がある場合はそちらに合わせること。
+        // 非表示ではないユーザーだけを返す。
         List<User> users;
         if (q == null || q.trim().isEmpty()) {
-            users = userRepository.findAll();
+            users = userRepository.findByHiddenFalse();
         } else {
-            // findByUserNameContainingIgnoreCaseOrEmailContainingIgnoreCase を使う場合は Pageable の扱いに注意
+            String keyword = q.toLowerCase();
             users = userRepository.findAll().stream()
-                    .filter(u -> (u.getUserName() != null && u.getUserName().toLowerCase().contains(q.toLowerCase()))
-                            || (u.getEmail() != null && u.getEmail().toLowerCase().contains(q.toLowerCase())))
+                    .filter(u -> !u.isHidden()) // hidden = false のみ
+                    .filter(u ->
+                            (u.getUserName() != null && u.getUserName().toLowerCase().contains(keyword)) ||
+                                    (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword))
+                    )
                     .collect(Collectors.toList());
         }
         return users.stream().map(this::toDto).collect(Collectors.toList());
@@ -52,12 +55,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public boolean deleteUser(Integer userId) {
-        if (!userRepository.existsById(userId)) {
-            return false;
-        }
-        userRepository.deleteById(userId);
-        return true;
+    public UserDto updateHidden(Integer userId, boolean hidden) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setHidden(hidden);
+        User saved = userRepository.save(user);
+        return toDto(saved);
+    }
+
+    @Override
+    public UserCountsDto getUserCounts() {
+        long admin = userRepository.countByRoleAndHiddenFalse("ADMIN");
+        long teacher = userRepository.countByRoleAndHiddenFalse("TEACHER");
+        long student = userRepository.countByRoleAndHiddenFalse("STUDENT");
+        long total = userRepository.countByHiddenFalse();
+        return new UserCountsDto(admin, teacher, student, total);
     }
 
     private UserDto toDto(User u) {
@@ -67,6 +79,7 @@ public class UserServiceImpl implements UserService {
         dto.setEmail(u.getEmail());
         dto.setRole(u.getRole());
         dto.setCreatedAt(u.getCreatedAt());
+        dto.setHidden(u.isHidden()); // hidden を DTO に含める
         return dto;
     }
 }

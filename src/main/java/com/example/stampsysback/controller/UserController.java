@@ -2,14 +2,11 @@ package com.example.stampsysback.controller;
 
 import com.example.stampsysback.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 
-import java.util.Map;
-
-@RestController
-@RequestMapping("/api/users")
+@Controller
 public class UserController {
 
     private final UserService userService;
@@ -19,14 +16,12 @@ public class UserController {
         this.userService = userService;
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable("id") Integer id) {
-        boolean ok = userService.deleteUser(id);
-        if (ok) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "User not found"));
-        }
-    }
+//    // 管理画面の /users などは別の Web コントローラで扱っている想定のため、
+//    // ここでは削除エンドポイント等は提供しない（API 経由で hidden を切り替える方針）。
+//    @GetMapping("/users")
+//    public String usersPage(Model model) {
+//        // 既存の Web コントローラの責務がある場合は view に必要な情報を詰める
+//        // ただし、実際のユーザー一覧取得はフロント側から /api/users を呼ぶことを想定
+//        return "app";
+//    }
 }

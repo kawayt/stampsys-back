@@ -32,6 +32,10 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    // ★ 追加: 非表示フラグ
+    @Column(name = "hidden", nullable = false)
+    private boolean hidden;
+
     public User() {}
 
     public Integer getUserId() {
@@ -69,5 +73,13 @@ public class User {
     }
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    // ★ getter / setter
+    public boolean isHidden() {
+        return hidden;
+    }
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 }
