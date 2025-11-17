@@ -168,27 +168,37 @@ public class StampActivityServiceImpl implements StampActivityService {
 
     // Helper to convert various timestamp representations into OffsetDateTime (UTC)
     private OffsetDateTime toOffsetDateTime(Object o) {
-        if (o == null) return null;
-        if (o instanceof OffsetDateTime) return (OffsetDateTime) o;
-        if (o instanceof Instant) return ((Instant) o).atOffset(ZoneOffset.UTC);
-        if (o instanceof Timestamp) {
-            Instant inst = ((Timestamp) o).toInstant();
-            return inst.atOffset(ZoneOffset.UTC);
-        }
-        if (o instanceof java.util.Date) {
-            Instant inst = ((java.util.Date) o).toInstant();
-            return inst.atOffset(ZoneOffset.UTC);
-        }
-        if (o instanceof String) {
-            try {
-                return OffsetDateTime.parse((String) o);
-            } catch (Exception ex) {
+        switch (o) {
+            case null -> {
+                return null;
+            }
+            case OffsetDateTime offsetDateTime -> {
+                return offsetDateTime;
+            }
+            case Instant instant -> {
+                return instant.atOffset(ZoneOffset.UTC);
+            }
+            case Timestamp timestamp -> {
+                Instant inst = timestamp.toInstant();
+                return inst.atOffset(ZoneOffset.UTC);
+            }
+            case Date date -> {
+                Instant inst = date.toInstant();
+                return inst.atOffset(ZoneOffset.UTC);
+            }
+            case String s -> {
                 try {
-                    Instant inst = Instant.parse((String) o);
-                    return inst.atOffset(ZoneOffset.UTC);
-                } catch (Exception e) {
-                    return null;
+                    return OffsetDateTime.parse(s);
+                } catch (Exception ex) {
+                    try {
+                        Instant inst = Instant.parse(s);
+                        return inst.atOffset(ZoneOffset.UTC);
+                    } catch (Exception e) {
+                        return null;
+                    }
                 }
+            }
+            default -> {
             }
         }
         return null;
