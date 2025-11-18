@@ -1,6 +1,7 @@
 package com.example.stampsysback.config;
 
 import com.example.stampsysback.security.CustomOidcUserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -16,14 +17,27 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+
+/**
+ * Security 設定
+ */
 @Configuration
-@EnableMethodSecurity // メソッドレベルの @PreAuthorize を使う場合に必要
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final CustomOidcUserService customOidcUserService;
+    private final ClientRegistrationRepository clientRegistrationRepository;
 
-    public SecurityConfig(CustomOidcUserService customOidcUserService) {
+    // post-logout の戻り先。Azure のアプリ登録で事前に許可しておくこと。
+    @Value("${ms.post_logout_redirect_uri:http://localhost:5173/login}")
+    private String postLogoutRedirectUri;
+
+    public SecurityConfig(CustomOidcUserService customOidcUserService,
+                          ClientRegistrationRepository clientRegistrationRepository) {
         this.customOidcUserService = customOidcUserService;
+        this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
     @Bean
@@ -49,7 +63,6 @@ public class SecurityConfig {
                                 "/api/stamp-management/**",
                                 "/api/rooms/*/stamp-activity"
                         ).permitAll()
-
                         // それ以外は認証を要求
                         .anyRequest().authenticated()
                 )
@@ -61,35 +74,38 @@ public class SecurityConfig {
                         .defaultSuccessUrl("http://localhost:5173", true)
                 )
                 .logout(logout -> logout
-                        // 任意: サーバセッションを無効化
+                        // サーバセッションを無効化
                         .invalidateHttpSession(true)
-                        // 任意: SecurityContext をクリア
                         .clearAuthentication(true)
-                        // 任意: JSESSIONID などの Cookie を削除
+                        // JSESSIONID 等を削除
                         .deleteCookies("JSESSIONID")
-                        // ログアウト成功時の挙動をカスタム
-                        .logoutSuccessHandler(reactRedirectLogoutSuccessHandler())
+                        // ログアウト成功時は OIDC の end_session_endpoint へ遷移させる
+                        .logoutSuccessHandler(oidcLogoutSuccessHandler())
                 );
 
         return http.build();
     }
 
     /**
-     * ログアウト完了後に React フロントのログイン画面へリダイレクトするハンドラ
+     * OIDC の end_session_endpoint に遷移するハンドラ
+     * ClientRegistrationRepository を使って provider の end_session_endpoint を解決し、
+     * post_logout_redirect_uri を付与してリダイレクトします。
      */
     @Bean
-    public LogoutSuccessHandler reactRedirectLogoutSuccessHandler() {
-        return (request, response, authentication) -> {
-            // 必要ならここで追加の Cookie を削除
-            clearCookie("XSRF-TOKEN", request, response);
-            clearCookie("X-XSRF-TOKEN", request, response);
+    public LogoutSuccessHandler oidcLogoutSuccessHandler() {
+        OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
+                new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
 
-            // React アプリのログインページまたはトップへリダイレクト
-            response.setStatus(HttpServletResponse.SC_FOUND);
-            response.setHeader("Location", "http://localhost:5173/login");
-        };
+        // post logout の戻り先（テンプレートや固定 URL を設定）
+        // 例: "http://localhost:5173/login"（Azure のアプリ登録で許可しておく）
+        oidcLogoutSuccessHandler.setPostLogoutRedirectUri(postLogoutRedirectUri);
+
+        // 必要ならセッションや Cookie を追加でクリアする処理をここに差し込めますが、
+        // filterChain の logout() 設定で invalidateHttpSession/clearAuthentication/deleteCookies は行われます。
+        return oidcLogoutSuccessHandler;
     }
 
+    // (オプション) 以前のクッキークリアユーティリティを残しておく
     private void clearCookie(String name, HttpServletRequest request, HttpServletResponse response) {
         if (request.getCookies() == null) return;
         for (Cookie c : request.getCookies()) {
@@ -120,9 +136,6 @@ public class SecurityConfig {
 
         // 許可するヘッダ
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-
-        // 必要ならレスポンスヘッダの露出設定も可能
-        // config.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // 全パスに上記設定を適用
