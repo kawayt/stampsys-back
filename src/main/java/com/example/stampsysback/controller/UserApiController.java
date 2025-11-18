@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import org.springframework.data.domain.Page;
 
 /**
@@ -24,13 +25,6 @@ public class UserApiController {
         this.userService = userService;
     }
 
-    /**
-     * ページネーション対応のユーザー一覧
-     * クエリ:
-     *  - q: 検索キーワード（省略可）
-     *  - page: 0 始まりのページ番号（デフォルト 0）
-     *  - size: 1ページあたりの件数（デフォルト 20）
-     */
     @GetMapping
     public Page<UserDto> list(@RequestParam(required = false) String q,
                               @RequestParam(defaultValue = "0") int page,
@@ -39,22 +33,28 @@ public class UserApiController {
     }
 
     /**
-     * ロール変更：管理者のみ許可
+     * 非表示ユーザー一覧（管理者のみ） - ページネーション対応
      */
+    @GetMapping("/hidden")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<UserDto> listHidden(@RequestParam(required = false) String q,
+                                    @RequestParam(defaultValue = "0") int page,
+                                    @RequestParam(defaultValue = "20") int size) {
+        return userService.listHiddenUsersPage(q, page, size);
+    }
+
     @PutMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public UserDto updateRole(@PathVariable("id") Integer id, @RequestBody RoleUpdateRequest req) {
         return userService.updateRole(id, req.getRole());
     }
 
-    // 非表示状態の更新（hidden=true が「実質削除」）
     @PutMapping("/{id}/hidden")
     @PreAuthorize("hasRole('ADMIN')")
     public UserDto updateHidden(@PathVariable("id") Integer id, @RequestBody HiddenUpdateRequest req) {
         return userService.updateHidden(id, req.isHidden());
     }
 
-    // ロール別カウント（表示対象のみ）
     @GetMapping("/counts")
     public UserCountsDto counts() {
         return userService.getUserCounts();

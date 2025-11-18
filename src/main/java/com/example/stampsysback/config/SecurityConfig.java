@@ -6,38 +6,34 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
-
-/**
- * Security 設定
- */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final CustomOidcUserService customOidcUserService;
     private final ClientRegistrationRepository clientRegistrationRepository;
+    private final CustomOidcUserService customOidcUserService;
 
-    // post-logout の戻り先。Azure のアプリ登録で事前に許可しておくこと。
-    @Value("${ms.post_logout_redirect_uri:http://localhost:5173/login}")
+    // application.properties / application.yml 側で設定可能にする
+    @Value("${app.oauth2-registration-id:microsoft}")
+    private String oauth2RegistrationId;
+
+    @Value("${app.post-logout-redirect-uri:http://localhost:5173}")
     private String postLogoutRedirectUri;
 
-    public SecurityConfig(CustomOidcUserService customOidcUserService,
-                          ClientRegistrationRepository clientRegistrationRepository) {
-        this.customOidcUserService = customOidcUserService;
+    public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository,
+                          CustomOidcUserService customOidcUserService) {
         this.clientRegistrationRepository = clientRegistrationRepository;
+        this.customOidcUserService = customOidcUserService;
     }
 
     @Bean
@@ -46,99 +42,61 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // 認証不要なパス
+                        // 認証不要なパス（必要最小限に限定）
                         .requestMatchers(
                                 "/",
                                 "/login**",
                                 "/error",
-                                "/users",
-                                "/users/**",
-                                "/api/users/**",
-                                "/users/admins/count",
                                 "/actuator/**",
                                 "/api/test-create",
                                 "/api/stamp-send",
-                                "/api/users",
                                 "/api/rooms/*/stamp-summary",
                                 "/api/stamp-management/**",
-                                "/api/rooms/*/stamp-activity"
+                                "/api/rooms/*/stamp-activity",
+                                "/static/**",
+                                "/favicon.ico"
                         ).permitAll()
-                        // それ以外は認証を要求
+
+                        // ユーザー一覧・編集は管理者・教員のみ（バックエンドで制御）
+                        .requestMatchers("/users", "/users/**", "/api/users", "/api/users/**")
+                        .hasAnyRole("ADMIN", "TEACHER")
+
+                        // それ以外は認証要求
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/oauth2/authorization/microsoft")
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .oidcUserService(customOidcUserService)
-                        )
+                        // application 側の registration id と合わせてください
+                        .loginPage("/oauth2/authorization/" + oauth2RegistrationId)
+                        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserService))
                         .defaultSuccessUrl("http://localhost:5173", true)
                 )
                 .logout(logout -> logout
-                        // サーバセッションを無効化
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
-                        // JSESSIONID 等を削除
                         .deleteCookies("JSESSIONID")
-                        // ログアウト成功時は OIDC の end_session_endpoint へ遷移させる
                         .logoutSuccessHandler(oidcLogoutSuccessHandler())
                 );
 
         return http.build();
     }
 
-    /**
-     * OIDC の end_session_endpoint に遷移するハンドラ
-     * ClientRegistrationRepository を使って provider の end_session_endpoint を解決し、
-     * post_logout_redirect_uri を付与してリダイレクトします。
-     */
     @Bean
     public LogoutSuccessHandler oidcLogoutSuccessHandler() {
-        OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
+        OidcClientInitiatedLogoutSuccessHandler handler =
                 new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
-
-        // post logout の戻り先（テンプレートや固定 URL を設定）
-        // 例: "http://localhost:5173/login"（Azure のアプリ登録で許可しておく）
-        oidcLogoutSuccessHandler.setPostLogoutRedirectUri(postLogoutRedirectUri);
-
-        // 必要ならセッションや Cookie を追加でクリアする処理をここに差し込めますが、
-        // filterChain の logout() 設定で invalidateHttpSession/clearAuthentication/deleteCookies は行われます。
-        return oidcLogoutSuccessHandler;
+        handler.setPostLogoutRedirectUri(postLogoutRedirectUri);
+        return handler;
     }
 
-    // (オプション) 以前のクッキークリアユーティリティを残しておく
-    private void clearCookie(String name, HttpServletRequest request, HttpServletResponse response) {
-        if (request.getCookies() == null) return;
-        for (Cookie c : request.getCookies()) {
-            if (name.equals(c.getName())) {
-                Cookie cookie = new Cookie(name, "");
-                cookie.setPath("/");
-                cookie.setMaxAge(0);
-                cookie.setHttpOnly(c.isHttpOnly());
-                cookie.setSecure(c.getSecure());
-                response.addCookie(cookie);
-            }
-        }
-    }
-
-    // CORS 設定
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // フロントエンドのオリジンを許可
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-
-        // 認証付きリクエストを許可
         config.setAllowCredentials(true);
-
-        // 許可するメソッド
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // 許可するヘッダ
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-
+        // 必要なヘッダを追加（X-XSRF-TOKEN などが使われる場合はここに追加）
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // 全パスに上記設定を適用
         source.registerCorsConfiguration("/**", config);
         return source;
     }

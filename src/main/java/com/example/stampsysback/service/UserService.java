@@ -18,4 +18,7 @@ public interface UserService {
 
     // ページネーション対応のユーザー一覧取得
     Page<UserDto> listUsersPage(String q, int page, int size);
+
+    // 追加: 非表示ユーザーのページ取得（管理者向け）
+    Page<UserDto> listHiddenUsersPage(String q, int page, int size);
 }

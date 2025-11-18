@@ -5,7 +5,6 @@ import com.example.stampsysback.dto.UserCountsDto;
 import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +60,38 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
+     * 追加: 非表示ユーザーのページ取得（管理者向け）
+     */
+    @Override
+    public Page<UserDto> listHiddenUsersPage(String q, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by("userId").ascending());
+        Page<User> pageResult;
+        if (q == null || q.trim().isEmpty()) {
+            // repository に直接 hidden=true の page メソッドがないため、簡便に findAll + stream でフィルタして page 化します
+            List<User> hiddenAll = userRepository.findAll().stream()
+                    .filter(User::isHidden)
+                    .collect(Collectors.toList());
+            int start = Math.min(hiddenAll.size(), page * size);
+            int end = Math.min(hiddenAll.size(), start + size);
+            List<User> content = hiddenAll.subList(start, end);
+            return new PageImpl<>(content.stream().map(this::toDto).collect(Collectors.toList()), pageable, hiddenAll.size());
+        } else {
+            String keyword = q.toLowerCase();
+            List<User> filtered = userRepository.findAll().stream()
+                    .filter(User::isHidden)
+                    .filter(u ->
+                            (u.getUserName() != null && u.getUserName().toLowerCase().contains(keyword)) ||
+                                    (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword))
+                    )
+                    .collect(Collectors.toList());
+            int start = Math.min(filtered.size(), page * size);
+            int end = Math.min(filtered.size(), start + size);
+            List<User> content = filtered.subList(start, end);
+            return new PageImpl<>(content.stream().map(this::toDto).collect(Collectors.toList()), pageable, filtered.size());
+        }
+    }
+
+    /**
      * ロール更新
      * - 最後の表示中 ADMIN を削除/降格させない保護を追加
      * - 管理者の最大人数制限（ここでは最大2名）に達している場合は追加を拒否する
@@ -74,16 +105,14 @@ public class UserServiceImpl implements UserService {
         // 1) 管理者の追加制限: newRole が ADMIN への昇格で、かつ現在 ADMIN でない場合
         if ("ADMIN".equals(newRole) && !"ADMIN".equals(user.getRole())) {
             long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-            // 既に表示中の ADMIN が 2 人以上いる場合は追加を拒否
             if (adminCount >= 2) {
                 throw new IllegalStateException("管理者は最大2名までに制限されています。これ以上管理者を追加できません。");
             }
         }
 
-        // 2) 降格保護: 現在 ADMIN を別のロールにしようとする場合、最後の一人でないか確認
+        // 2) 降格保護
         if ("ADMIN".equals(user.getRole()) && !"ADMIN".equals(newRole)) {
             long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-            // adminCount は表示中の ADMIN の数。自分が最後の一人なら降格を拒否
             if (adminCount <= 1) {
                 throw new IllegalStateException("最後の管理者削除することはできません。最低でも管理者は１人存在している必要があります。");
             }
@@ -94,17 +123,12 @@ public class UserServiceImpl implements UserService {
         return toDto(saved);
     }
 
-    /**
-     * 非表示フラグ更新（物理削除はしない）
-     * - ADMIN を非表示にする際、最後の表示中 ADMIN を隠せないよう保護
-     */
     @Override
     @Transactional
     public UserDto updateHidden(Integer userId, boolean hidden) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        // 重要: ADMIN を非表示にしようとする際は最後の表示中の ADMIN にならないか確認
         if (hidden && "ADMIN".equals(user.getRole())) {
             long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
             if (adminCount <= 1) {
