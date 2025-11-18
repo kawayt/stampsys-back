@@ -1,16 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="jp.kawayt.stampsys.room.mapper.RoomMapper">
+<mapper namespace="com.example.stampsysback.mapper.RoomMapper">
 
-    <select id="selectByClassId" resultType="com.example.stampsysback.entity.RoomEntity">
+    <!-- ★ ここを追加: RoomResult の定義 -->
+    <resultMap id="RoomResult" type="com.example.stampsysback.entity.RoomEntity">
+        <id     column="room_id"   property="roomId"/>
+        <result column="room_name" property="roomName"/>
+        <result column="class_id"  property="classId"/>
+        <result column="active"    property="active"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="selectByClassId"
+            parameterType="int"
+            resultMap="RoomResult">
         SELECT room_id, room_name, class_id, active, created_at
         FROM rooms
         WHERE class_id = #{classId}
         ORDER BY room_id;
     </select>
 
-    <insert id="insert" parameterType="jp.kawayt.stampsys.room.entity.Room">
+    <insert id="insert" parameterType="com.example.stampsysback.entity.RoomEntity">
         INSERT INTO rooms (room_id, room_name, class_id, active, created_at)
         VALUES (#{roomId}, #{roomName}, #{classId}, #{active}, #{createdAt})
     </insert>
