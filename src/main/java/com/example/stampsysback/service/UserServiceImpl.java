@@ -6,6 +6,7 @@ import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,8 +46,24 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
+     * ページネーション対応のユーザー一覧取得
+     */
+    @Override
+    public Page<UserDto> listUsersPage(String q, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by("userId").ascending());
+        Page<User> pageResult;
+        if (q == null || q.trim().isEmpty()) {
+            pageResult = userRepository.findByHiddenFalse(pageable);
+        } else {
+            pageResult = userRepository.searchVisible(q, pageable);
+        }
+        return pageResult.map(this::toDto);
+    }
+
+    /**
      * ロール更新
      * - 最後の表示中 ADMIN を削除/降格させない保護を追加
+     * - 管理者の最大人数制限（ここでは最大2名）に達している場合は追加を拒否する
      */
     @Override
     @Transactional
@@ -54,8 +71,16 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        // 重要: もし現在のユーザーが ADMIN で、かつ新しい role が ADMIN 以外なら
-        // 最後の表示中の ADMIN になっていないか確認する
+        // 1) 管理者の追加制限: newRole が ADMIN への昇格で、かつ現在 ADMIN でない場合
+        if ("ADMIN".equals(newRole) && !"ADMIN".equals(user.getRole())) {
+            long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
+            // 既に表示中の ADMIN が 2 人以上いる場合は追加を拒否
+            if (adminCount >= 2) {
+                throw new IllegalStateException("管理者は最大2名までに制限されています。これ以上管理者を追加できません。");
+            }
+        }
+
+        // 2) 降格保護: 現在 ADMIN を別のロールにしようとする場合、最後の一人でないか確認
         if ("ADMIN".equals(user.getRole()) && !"ADMIN".equals(newRole)) {
             long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
             // adminCount は表示中の ADMIN の数。自分が最後の一人なら降格を拒否

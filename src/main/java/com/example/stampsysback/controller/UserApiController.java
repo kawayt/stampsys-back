@@ -2,15 +2,12 @@ package com.example.stampsysback.controller;
 
 import com.example.stampsysback.dto.UserDto;
 import com.example.stampsysback.dto.UserCountsDto;
-import com.example.stampsysback.model.User;
-import com.example.stampsysback.repository.UserRepository;
 import com.example.stampsysback.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
 
 /**
  * API コントローラ: /api/users
@@ -21,60 +18,32 @@ import java.util.stream.Collectors;
 public class UserApiController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
 
     @Autowired
-    public UserApiController(UserService userService, UserRepository userRepository) {
+    public UserApiController(UserService userService) {
         this.userService = userService;
-        this.userRepository = userRepository;
     }
 
     /**
-     * ユーザー一覧（既存）：検索 q を受け取り、非表示フラグが false のユーザーのみ返す
+     * ページネーション対応のユーザー一覧
+     * クエリ:
+     *  - q: 検索キーワード（省略可）
+     *  - page: 0 始まりのページ番号（デフォルト 0）
+     *  - size: 1ページあたりの件数（デフォルト 20）
      */
     @GetMapping
-    public List<UserDto> list(@RequestParam(required = false) String q) {
-        return (List<UserDto>) userService.listUsers(q);
+    public Page<UserDto> list(@RequestParam(required = false) String q,
+                              @RequestParam(defaultValue = "0") int page,
+                              @RequestParam(defaultValue = "20") int size) {
+        return userService.listUsersPage(q, page, size);
     }
 
     /**
-     * 追加エンドポイント: 非表示（hidden=true）のユーザー一覧を返す。
-     * 管理者のみアクセス可能にしておくのが安全です。
-     *
-     * 使い方:
-     *  GET /api/users/hidden
-     *  GET /api/users/hidden?q=keyword   // 名前・メールで絞り込み
+     * ロール変更：管理者のみ許可
      */
-    @GetMapping("/hidden")
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<UserDto> listHidden(@RequestParam(required = false) String q) {
-        List<User> users = userRepository.findAll().stream()
-                .filter(User::isHidden)
-                .collect(Collectors.toList());
-
-        if (q != null && !q.trim().isEmpty()) {
-            String keyword = q.toLowerCase();
-            users = users.stream().filter(u ->
-                    (u.getUserName() != null && u.getUserName().toLowerCase().contains(keyword)) ||
-                            (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword))
-            ).collect(Collectors.toList());
-        }
-
-        return users.stream().map(u -> {
-            UserDto dto = new UserDto();
-            dto.setUserId(u.getUserId());
-            dto.setUserName(u.getUserName());
-            dto.setEmail(u.getEmail());
-            dto.setRole(u.getRole());
-            dto.setCreatedAt(u.getCreatedAt());
-            dto.setHidden(u.isHidden());
-            return dto;
-        }).collect(Collectors.toList());
-    }
-
     @PutMapping("/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserDto updateRole(@PathVariable("id") Integer id, @RequestBody RoleUpdateRequest req) {
-        // TODO: 管理者権限チェック（Spring Security）
         return userService.updateRole(id, req.getRole());
     }
 
@@ -85,7 +54,7 @@ public class UserApiController {
         return userService.updateHidden(id, req.isHidden());
     }
 
-    // ★ 追加: ロール別カウント（表示対象のみ）
+    // ロール別カウント（表示対象のみ）
     @GetMapping("/counts")
     public UserCountsDto counts() {
         return userService.getUserCounts();

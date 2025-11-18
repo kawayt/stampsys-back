@@ -1,9 +1,12 @@
 package com.example.stampsysback.repository;
 
 import com.example.stampsysback.model.User;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -24,4 +27,11 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     // ★ 追加: 表示される全体数（hidden=false の合計）
     long countByHiddenFalse();
+
+    // ページングで visible のみ取得
+    Page<User> findByHiddenFalse(Pageable pageable);
+
+    // 検索クエリ（userName または email）で visible のみをページング検索
+    @Query("select u from User u where u.hidden = false and (lower(u.userName) like lower(concat('%', :q, '%')) or lower(u.email) like lower(concat('%', :q, '%')))")
+    Page<User> searchVisible(@Param("q") String q, Pageable pageable);
 }
