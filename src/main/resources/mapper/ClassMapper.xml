@@ -16,4 +16,9 @@
     <select id="selectMaxId" resultType="int">
         SELECT COALESCE(MAX(class_id), 0) FROM classes;
     </select>
+
+    <!-- 指定したclass_idが存在するか確認 -->
+    <select id="existsById" parameterType="int" resultType="int">
+        SELECT 1 FROM classes WHERE class_id = #{classId} LIMIT 1
+    </select>
 </mapper>

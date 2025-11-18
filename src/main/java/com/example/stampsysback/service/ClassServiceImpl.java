@@ -26,5 +26,6 @@ public class ClassServiceImpl implements ClassService{
         Integer maxId = classMapper.selectMaxId();
         classEntity.setClassId(maxId + 1); // 次のIDを設定
         classMapper.insert(classEntity);
+        // return classEntity;
     }
 }
