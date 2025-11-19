@@ -34,7 +34,10 @@ public class AuthorizationService {
             dbUser = userRepository.findByProviderUserId(providerId).orElse(null);
         }
         if (dbUser == null) {
-            String email = principal.getAttribute("email") != null ? String.valueOf(principal.getAttribute("email")) : null;
+            // principal.getAttribute("email") を複数回呼ばないように局所変数に格納してから null チェックすることで
+            // 静的解析の「null の可能性」警告を解消します。
+            Object emailObj = principal.getAttribute("email");
+            String email = emailObj != null ? String.valueOf(emailObj) : null;
             if (email != null) {
                 dbUser = userRepository.findByEmail(email).orElse(null);
             }

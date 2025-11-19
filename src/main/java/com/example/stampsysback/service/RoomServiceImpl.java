@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Transactional
@@ -22,6 +23,7 @@ public class RoomServiceImpl implements RoomService{
     private final RoomMapper roomMapper;
     private final ClassMapper classMapper;
     private static final int MAX_RETRIES = 5;
+    private static final long BASE_BACKOFF_MS = 50L; // 基本待ち時間（ミリ秒）
 
     @Override
     public Integer findClassIdByRoomId(Integer roomId) {
@@ -30,7 +32,6 @@ public class RoomServiceImpl implements RoomService{
 
     @Override
     public List<RoomEntity> selectByClassId(Integer classId){
-
         return roomMapper.selectByClassId(classId);
     }
 
@@ -38,63 +39,62 @@ public class RoomServiceImpl implements RoomService{
     public RoomDto insertRoom(RoomForm roomForm){
 
         // class_id存在チェック
-        // フォームから受けとったクラスIDがexitsByIdでマッパー　→　XMLであるか確認
         Integer exists = classMapper.existsById(roomForm.getClassId());
 
         if (exists == null) {
             throw new IllegalArgumentException("指定された classId が存在しません: " + roomForm.getClassId());
         }
-          // 保留
-        // 同一 class 内で room_name の重複チェック
-        //Room dup = roomMapper.selectByNameAndClass(form.getRoomName(), form.getClassId());
-        //if (dup != null) {
-        //throw new IllegalStateException("同じクラス内に同名の部屋が既に存在します: " + form.getRoomName());
-        //}
 
-        // RoomFormをRoomEntityに変換したものをtoInsertへ
+        // RoomFormをRoomEntityに変換
         RoomEntity toInsert = RoomHelper.toEntity(roomForm);
 
-
-        // 採番: MAX(room_id) + 1 を candidate として insert を試み、重複が起きたら再試行する
-
-        // リトライ回数をカウントする変数、最初は0
-        int attempt = 0;
-        // 最大MAX_RETRIES（五回）まで繰り返す。
-        while (true) {
-            // リトライ回数を足す
-            attempt++;
-
-            // 一番新しいroom_idを取得
+        // 最大試行回数でループ（while(true) を避ける）
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            // 現在の最大room_idを取得して candidate を決定
             Integer maxId = roomMapper.selectMaxRoomId();
-
-            // 最大値があればmaxId+1、なければ0+1を新しいIDとする
             int candidateId = (maxId != null ? maxId : 0) + 1;
-            // 新しく追加するroom_idをエンティティ → DTOへ変換してtoInsertにセット
             toInsert.setRoomId(candidateId);
 
-            // DBへ挿入を試みる
             try {
-                // 新しく追加するroom_idをセットしてroomを作る
                 int rows = roomMapper.insert(toInsert);
                 if (rows == 1) {
-                    // 成功!!!
-
-                    // room_idで検索してselectByIdでroom_idに対応したroomを取得
                     RoomEntity created = roomMapper.selectById(toInsert.getRoomId());
-                    // 取得したroomをEntity → DTOに変換して返す
                     return RoomHelper.toDto(created);
                 } else {
-                    // 想定外: 影響行数が 1 でない場合は失敗として例外
+                    // 想定外: 影響行数が 1 でない
                     throw new DataAccessException("Room insert failed, affected rows: " + rows) {};
                 }
             } catch (DuplicateKeyException dkEx) {
-                // 同時挿入で新しく追加されるroom_idが競合した場合はリトライ
-                if (attempt >= MAX_RETRIES) {
-                    throw new DataAccessException("Failed to insert room after retries due to duplicate key", dkEx) {};
+                // 競合が発生した場合はリトライ（最後の試行なら例外を投げる）
+                if (attempt == MAX_RETRIES) {
+                    throw new DataAccessException("Failed to insert room after " + MAX_RETRIES + " retries due to duplicate key", dkEx) {};
                 }
-                // 少し待って再試行することで競合が解消される可能性を上げる
-                try { Thread.sleep(50L); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+                // 指数バックオフ + ランダムジッタで待機（ビジーウェイトではない）
+                long backoff = computeBackoffWithJitter(attempt);
+                try {
+                    Thread.sleep(backoff);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new DataAccessException("Insert interrupted while retrying", ie) {};
+                }
+                // 次のループで再試行
             }
         }
+
+        // 理論上ここには到達しないが安全のため例外を投げる
+        throw new DataAccessException("Failed to insert room (unexpected control flow)") {};
+    }
+
+    /**
+     * 指数バックオフ（base * 2^(attempt-1)）にランダムジッタを加えた待機時間（ミリ秒）を返す。
+     * attempt は 1 から始まる試行回数。
+     */
+    private long computeBackoffWithJitter(int attempt) {
+        long exp = BASE_BACKOFF_MS * (1L << (Math.max(0, attempt - 1)));
+        // 上限を設定してオーバーフローを防ぐ（例えば 2s）
+        long capped = Math.min(exp, 2000L);
+        // ジッタ: 0..(capped/2)
+        long jitter = ThreadLocalRandom.current().nextLong(capped / 2 + 1);
+        return capped / 2 + jitter;
     }
 }
