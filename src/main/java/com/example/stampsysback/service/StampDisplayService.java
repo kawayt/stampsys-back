@@ -19,8 +19,4 @@ public class StampDisplayService {
         //「入室中のルームと同じclass_idを持つstamps_classesテーブルのstamp_idに紐づいたstamp_name,stamp_color,stamp_icon」を返す
         return stampDisplayMapper.findStampsByRoomId(roomId);
     }
-
-    public List<StampDto> findStampsByClassId(Integer classId) {
-        return stampDisplayMapper.findStampsByClassId(classId);
-    }
 }

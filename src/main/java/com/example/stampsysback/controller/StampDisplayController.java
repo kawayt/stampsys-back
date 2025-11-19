@@ -70,29 +70,4 @@ public class StampDisplayController {
         List<StampDto> stamps = stampDisplayService.findStampsByRoomId(roomId);
         return ResponseEntity.ok(stamps);
     }
-
-    @GetMapping("/classes/{classId}/stamps")
-    public ResponseEntity<?> getStampsByClass(
-            @PathVariable Integer classId,
-            @AuthenticationPrincipal OAuth2User principal) {
-
-        // optional: same authorization check could be applied here if desired
-        // For parity, require authentication and membership/role check
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "ログインが必要です"));
-        }
-
-        Integer userId = authorizationService.resolveCurrentUserId(principal);
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "ユーザー情報が見つかりません"));
-        }
-
-        boolean allowed = authorizationService.isUserInClass(userId, classId) || authorizationService.isTeacherOrAdmin(userId);
-        if (!allowed) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "クラスの参照権限がありません"));
-        }
-
-        List<StampDto> stamps = stampDisplayService.findStampsByClassId(classId);
-        return ResponseEntity.ok(stamps);
-    }
 }

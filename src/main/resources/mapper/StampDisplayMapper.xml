@@ -16,16 +16,4 @@
         ORDER BY s.stamp_id
     </select>
 
-    <!-- classId から直接取得する場合 -->
-    <select id="findStampsByClassId" parameterType="int" resultType="com.example.stampsysback.dto.StampDto">
-        SELECT s.stamp_id   AS stampId,
-               s.stamp_name AS stampName,
-               s.stamp_color AS stampColor,
-               s.stamp_icon  AS stampIcon
-        FROM stamps s
-                 JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
-        WHERE sc.class_id = #{classId}
-        ORDER BY s.stamp_id
-    </select>
-
 </mapper>
