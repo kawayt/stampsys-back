@@ -12,4 +12,6 @@ public interface RoomService {
     List<RoomEntity> selectByClassId(Integer classId);
 
     RoomDto insertRoom(RoomForm roomForm);
+
+    Integer findClassIdByRoomId(Integer roomId);
 }

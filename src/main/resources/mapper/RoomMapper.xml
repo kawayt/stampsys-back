@@ -43,4 +43,11 @@
         SELECT COALESCE(MAX(room_id), 0) FROM rooms
     </select>
 
+    <!-- 追加: roomId から class_id を取得する単純クエリ -->
+    <select id="findClassIdByRoomId" parameterType="int" resultType="int">
+        SELECT class_id
+        FROM rooms
+        WHERE room_id = #{roomId}
+    </select>
+
 </mapper>

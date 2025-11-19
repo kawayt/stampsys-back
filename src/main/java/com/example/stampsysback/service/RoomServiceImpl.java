@@ -23,6 +23,10 @@ public class RoomServiceImpl implements RoomService{
     private final ClassMapper classMapper;
     private static final int MAX_RETRIES = 5;
 
+    @Override
+    public Integer findClassIdByRoomId(Integer roomId) {
+        return roomMapper.findClassIdByRoomId(roomId);
+    }
 
     @Override
     public List<RoomEntity> selectByClassId(Integer classId){

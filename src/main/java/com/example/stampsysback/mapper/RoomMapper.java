@@ -20,4 +20,6 @@ public interface RoomMapper {
     // 現在の最大room_idを返す（存在しなければ０）
     Integer selectMaxRoomId(); // 最大ID取得
 
+    Integer findClassIdByRoomId(@Param("roomId") Integer roomId);
+
 }
