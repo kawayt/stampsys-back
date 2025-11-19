@@ -8,6 +8,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 
 /**
@@ -51,11 +53,11 @@ public class UserApiController {
         return userService.updateRole(id, req.getRole());
     }
 
-    @PutMapping("/{id}/hidden")
-    @PreAuthorize("hasRole('ADMIN')")
-    public UserDto updateHidden(@PathVariable("id") Integer id, @RequestBody HiddenUpdateRequest req) {
-        return userService.updateHidden(id, req.isHidden());
-    }
+//    @PutMapping("/{id}/hidden")
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public UserDto updateHidden(@PathVariable("id") Integer id, @RequestBody HiddenUpdateRequest req) {
+//        return userService.updateHidden(id, req.isHidden());
+//    }
 
     // counts に role を受け取るように変更
     @GetMapping("/counts")
@@ -67,6 +69,16 @@ public class UserApiController {
         private String role;
         public String getRole(){ return role; }
         public void setRole(String role){ this.role = role; }
+    }
+    @PutMapping("/{id}/hidden")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserDto updateHidden(@PathVariable("id") Integer id, @RequestBody Map<String, Object> body) {
+        boolean hidden = false;
+        if (body != null && body.containsKey("hidden")) {
+            Object v = body.get("hidden");
+            hidden = Boolean.parseBoolean(String.valueOf(v));
+        }
+        return userService.updateHidden(id, hidden);
     }
 
     public static class HiddenUpdateRequest {
