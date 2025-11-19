@@ -9,5 +9,4 @@ import java.util.List;
 @Mapper
 public interface StampDisplayMapper {
     List<StampDto> findStampsByRoomId(@Param("roomId") Integer roomId);
-    List<StampDto> findStampsByClassId(@Param("classId") Integer classId);
 }
