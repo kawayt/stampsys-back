@@ -33,7 +33,6 @@ public class StampDisplayController {
     /**
      * ルームに紐づくスタンプ一覧を返す。
      * GET /api/rooms/{roomId}/stamps
-     *
      * - 認証済みであることを前提とし、ルームが属する class_id に
      *   対してユーザーが所属している（users_classes に存在）か、
      *   またはユーザーが TEACHER/ADMIN の場合にのみスタンプ一覧を返します。

@@ -60,7 +60,7 @@ public class RoomServiceImpl implements RoomService{
         // リトライ回数をカウントする変数、最初は0
         int attempt = 0;
         // 最大MAX_RETRIES（五回）まで繰り返す。
-        while (attempt < MAX_RETRIES) {
+        while (true) {
             // リトライ回数を足す
             attempt++;
 
@@ -94,14 +94,7 @@ public class RoomServiceImpl implements RoomService{
                 }
                 // 少し待って再試行することで競合が解消される可能性を上げる
                 try { Thread.sleep(50L); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
-                continue;
-            } catch (DataAccessException ex) {
-                // その他の DB エラーは上位へ伝播
-                throw ex;
             }
         }
-            // 保留
-        // ここには到達しないはずだが念のため例外
-        throw new DataAccessException("Failed to insert room after " + MAX_RETRIES + " retries") {};
     }
 }

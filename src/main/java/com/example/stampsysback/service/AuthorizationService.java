@@ -6,8 +6,6 @@ import com.example.stampsysback.repository.UsersClassesRepository;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-
 @Service
 public class AuthorizationService {
 

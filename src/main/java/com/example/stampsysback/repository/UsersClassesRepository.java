@@ -7,7 +7,6 @@ import org.springframework.dao.EmptyResultDataAccessException;
 /**
  * users_classes テーブルに対する最小限のリポジトリ。
  * JPA エンティティを作らずに存在チェックのみ行うため JdbcTemplate を使用しています。
- *
  * テーブル／カラム名が実際と違う場合は SQL を修正してください。
  */
 @Repository
