@@ -21,4 +21,10 @@ public interface UserService {
 
     // 追加: 非表示ユーザーのページ取得（管理者向け）
     Page<UserDto> listHiddenUsersPage(String q, int page, int size);
+
+    // 追加: role を考慮したページ取得（フロントから role クエリが来る想定）
+    Page<UserDto> listUsersPage(String q, String role, int page, int size);
+
+    // 追加: role を考慮した counts 取得
+    UserCountsDto getUserCounts(String role);
 }

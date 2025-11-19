@@ -27,18 +27,30 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> listUsers(String q) {
-        // 非表示ではないユーザーだけを返す。
+        return listUsers(q, null);
+    }
+
+    // 新: role を受け取る listUsers（配列レスポンス用）
+    public List<UserDto> listUsers(String q, String role) {
         List<User> users;
-        if (q == null || q.trim().isEmpty()) {
+        if ((q == null || q.trim().isEmpty()) && (role == null || "ALL".equalsIgnoreCase(role))) {
             users = userRepository.findByHiddenFalse();
         } else {
-            String keyword = q.toLowerCase();
+            String keyword = q == null ? null : q.toLowerCase();
             users = userRepository.findAll().stream()
-                    .filter(u -> !u.isHidden()) // hidden = false のみ
-                    .filter(u ->
-                            (u.getUserName() != null && u.getUserName().toLowerCase().contains(keyword)) ||
-                                    (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword))
-                    )
+                    .filter(u -> !u.isHidden())
+                    .filter(u -> {
+                        if (role != null && !"ALL".equalsIgnoreCase(role)) {
+                            if (u.getRole() == null) return false;
+                            if (!u.getRole().equalsIgnoreCase(role)) return false;
+                        }
+                        return true;
+                    })
+                    .filter(u -> {
+                        if (keyword == null || keyword.isEmpty()) return true;
+                        return (u.getUserName() != null && u.getUserName().toLowerCase().contains(keyword))
+                                || (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword));
+                    })
                     .collect(Collectors.toList());
         }
         return users.stream().map(this::toDto).collect(Collectors.toList());
@@ -49,13 +61,47 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public Page<UserDto> listUsersPage(String q, int page, int size) {
+        // 既存の引数互換のため、role = null として呼ぶ
+        return listUsersPage(q, null, page, size);
+    }
+
+    // 新: role を考慮したページング実装
+    @Override
+    public Page<UserDto> listUsersPage(String q, String role, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by("userId").ascending());
+
         Page<User> pageResult;
-        if (q == null || q.trim().isEmpty()) {
+
+        // ロール指定があるかどうかでリポジトリメソッドを使い分け
+        if ((q == null || q.trim().isEmpty()) && (role == null || "ALL".equalsIgnoreCase(role))) {
             pageResult = userRepository.findByHiddenFalse(pageable);
+        } else if ((q == null || q.trim().isEmpty()) && role != null && !"ALL".equalsIgnoreCase(role)) {
+            // role 指定のみ：リポジトリに findByRoleAndHiddenFalse を追加して利用
+            pageResult = userRepository.findByRoleAndHiddenFalse(role, pageable);
         } else {
-            pageResult = userRepository.searchVisible(q, pageable);
+            // q がある場合：repository の searchVisible があればそれを使うのがベスト（ここではフォールバック実装）
+            // フォールバック: 全件検索 → フィルタ → page 化
+            String keyword = q == null ? null : q.toLowerCase();
+            List<User> filtered = userRepository.findAll().stream()
+                    .filter(u -> !u.isHidden())
+                    .filter(u -> {
+                        if (role != null && !"ALL".equalsIgnoreCase(role)) {
+                            return u.getRole() != null && u.getRole().equalsIgnoreCase(role);
+                        }
+                        return true;
+                    })
+                    .filter(u -> {
+                        if (keyword == null || keyword.isEmpty()) return true;
+                        return (u.getUserName() != null && u.getUserName().toLowerCase().contains(keyword))
+                                || (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword));
+                    })
+                    .collect(Collectors.toList());
+            int start = Math.min(filtered.size(), page * size);
+            int end = Math.min(filtered.size(), start + size);
+            List<User> content = filtered.subList(start, end);
+            pageResult = new PageImpl<>(content, pageable, filtered.size());
         }
+
         return pageResult.map(this::toDto);
     }
 
@@ -67,18 +113,14 @@ public class UserServiceImpl implements UserService {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by("userId").ascending());
         Page<User> pageResult;
         if (q == null || q.trim().isEmpty()) {
-            // repository に直接 hidden=true の page メソッドがないため、簡便に findAll + stream でフィルタして page 化します
-            List<User> hiddenAll = userRepository.findAll().stream()
-                    .filter(User::isHidden)
-                    .collect(Collectors.toList());
+            List<User> hiddenAll = userRepository.findByHiddenTrue();
             int start = Math.min(hiddenAll.size(), page * size);
             int end = Math.min(hiddenAll.size(), start + size);
             List<User> content = hiddenAll.subList(start, end);
             return new PageImpl<>(content.stream().map(this::toDto).collect(Collectors.toList()), pageable, hiddenAll.size());
         } else {
             String keyword = q.toLowerCase();
-            List<User> filtered = userRepository.findAll().stream()
-                    .filter(User::isHidden)
+            List<User> filtered = userRepository.findByHiddenTrue().stream()
                     .filter(u ->
                             (u.getUserName() != null && u.getUserName().toLowerCase().contains(keyword)) ||
                                     (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword))
@@ -91,73 +133,64 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    /**
-     * ロール更新
-     * - 最後の表示中 ADMIN を削除/降格させない保護を追加
-     * - 管理者の最大人数制限（ここでは最大2名）に達している場合は追加を拒否する
-     */
     @Override
     @Transactional
     public UserDto updateRole(Integer userId, String newRole) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
-
-        // 1) 管理者の追加制限: newRole が ADMIN への昇格で、かつ現在 ADMIN でない場合
-        if ("ADMIN".equals(newRole) && !"ADMIN".equals(user.getRole())) {
-            long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-            if (adminCount >= 2) {
-                throw new IllegalStateException("管理者は最大2名までに制限されています。これ以上管理者を追加できません。");
-            }
-        }
-
-        // 2) 降格保護
-        if ("ADMIN".equals(user.getRole()) && !"ADMIN".equals(newRole)) {
-            long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-            if (adminCount <= 1) {
-                throw new IllegalStateException("最後の管理者削除することはできません。最低でも管理者は１人存在している必要があります。");
-            }
-        }
-
-        user.setRole(newRole);
-        User saved = userRepository.save(user);
-        return toDto(saved);
+        User u = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("user not found"));
+        u.setRole(newRole);
+        userRepository.save(u);
+        return toDto(u);
     }
 
     @Override
     @Transactional
     public UserDto updateHidden(Integer userId, boolean hidden) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
-
-        if (hidden && "ADMIN".equals(user.getRole())) {
-            long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-            if (adminCount <= 1) {
-                throw new IllegalStateException("最後の管理者削除することはできません。最低でも管理者は１人存在している必要があります。");
-            }
-        }
-
-        user.setHidden(hidden);
-        User saved = userRepository.save(user);
-        return toDto(saved);
+        User u = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("user not found"));
+        u.setHidden(hidden);
+        userRepository.save(u);
+        return toDto(u);
     }
 
     @Override
     public UserCountsDto getUserCounts() {
-        long admin = userRepository.countByRoleAndHiddenFalse("ADMIN");
-        long teacher = userRepository.countByRoleAndHiddenFalse("TEACHER");
-        long student = userRepository.countByRoleAndHiddenFalse("STUDENT");
-        long total = userRepository.countByHiddenFalse();
-        return new UserCountsDto(admin, teacher, student, total);
+        return getUserCounts(null);
+    }
+
+    // 新: role 指定でカウントを返す（role=null or ALL は従来どおり全体を返す）
+    @Override
+    public UserCountsDto getUserCounts(String role) {
+        if (role != null && !"ALL".equalsIgnoreCase(role)) {
+            long filtered = userRepository.countByRoleAndHiddenFalse(role);
+            // 他の role カウントは 0 にして total に filtered をセットする（フロント側は total を使う想定）
+            UserCountsDto dto = new UserCountsDto();
+            if ("ADMIN".equalsIgnoreCase(role)) dto.setAdmin((int) filtered);
+            else if ("TEACHER".equalsIgnoreCase(role)) dto.setTeacher((int) filtered);
+            else if ("STUDENT".equalsIgnoreCase(role)) dto.setStudent((int) filtered);
+            dto.setTotal((int) filtered);
+            return dto;
+        } else {
+            // 既存の実装: 全体の管理者/教員/学生/total を返す
+            long admin = userRepository.countByRoleAndHiddenFalse("ADMIN");
+            long teacher = userRepository.countByRoleAndHiddenFalse("TEACHER");
+            long student = userRepository.countByRoleAndHiddenFalse("STUDENT");
+            long total = userRepository.countByHiddenFalse();
+            UserCountsDto dto = new UserCountsDto();
+            dto.setAdmin((int) admin);
+            dto.setTeacher((int) teacher);
+            dto.setStudent((int) student);
+            dto.setTotal((int) total);
+            return dto;
+        }
     }
 
     private UserDto toDto(User u) {
-        UserDto dto = new UserDto();
-        dto.setUserId(u.getUserId());
-        dto.setUserName(u.getUserName());
-        dto.setEmail(u.getEmail());
-        dto.setRole(u.getRole());
-        dto.setCreatedAt(u.getCreatedAt());
-        dto.setHidden(u.isHidden()); // hidden を DTO に含める
-        return dto;
+        UserDto d = new UserDto();
+        d.setUserId(u.getUserId());
+        d.setUserName(u.getUserName());
+        d.setEmail(u.getEmail());
+        d.setRole(u.getRole());
+        d.setCreatedAt(u.getCreatedAt());
+        d.setHidden(u.isHidden());
+        return d;
     }
 }

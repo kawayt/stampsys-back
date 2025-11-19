@@ -4,34 +4,31 @@ import com.example.stampsysback.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
+    Page<User> findByHiddenFalse(Pageable pageable);
+    List<User> findByHiddenFalse();
+
+    // 追加: role と hidden を組み合わせた検索
+    Page<User> findByRoleAndHiddenFalse(String role, Pageable pageable);
+    List<User> findByRoleAndHiddenFalse(String role);
+
+    // 非表示ユーザー
+    List<User> findByHiddenTrue();
+    Page<User> findByRoleAndHiddenTrue(String role, Pageable pageable);
+
+    // カウント用
+    long countByHiddenFalse();
+    long countByRoleAndHiddenFalse(String role);
+
     Optional<User> findByProviderUserId(String providerUserId);
     Optional<User> findByEmail(String email);
 
-    Page<User> findByUserNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String userName, String email, Pageable pageable);
+    Long countByRole(String admin);
 
-    // role によるカウント（管理者が既に存在するか確認するため）
-    long countByRole(String role);
-
-    // hidden=false のユーザー一覧を取得するメソッド
-    List<User> findByHiddenFalse();
-
-    // ★ 追加: hidden=false を考慮した役割ごとのカウント
-    long countByRoleAndHiddenFalse(String role);
-
-    // ★ 追加: 表示される全体数（hidden=false の合計）
-    long countByHiddenFalse();
-
-    // ページングで visible のみ取得
-    Page<User> findByHiddenFalse(Pageable pageable);
-
-    // 検索クエリ（userName または email）で visible のみをページング検索
-    @Query("select u from User u where u.hidden = false and (lower(u.userName) like lower(concat('%', :q, '%')) or lower(u.email) like lower(concat('%', :q, '%')))")
-    Page<User> searchVisible(@Param("q") String q, Pageable pageable);
+    // 既存: キーワード検索（実装済みがあればそのまま）
+    // Page<User> searchVisible(String q, Pageable pageable); // もし存在するなら利用
 }

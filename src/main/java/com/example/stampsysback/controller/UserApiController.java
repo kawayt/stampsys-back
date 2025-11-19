@@ -25,11 +25,13 @@ public class UserApiController {
         this.userService = userService;
     }
 
+    // role を受け取るように変更
     @GetMapping
     public Page<UserDto> list(@RequestParam(required = false) String q,
+                              @RequestParam(required = false) String role,
                               @RequestParam(defaultValue = "0") int page,
                               @RequestParam(defaultValue = "20") int size) {
-        return userService.listUsersPage(q, page, size);
+        return userService.listUsersPage(q, role, page, size);
     }
 
     /**
@@ -55,9 +57,10 @@ public class UserApiController {
         return userService.updateHidden(id, req.isHidden());
     }
 
+    // counts に role を受け取るように変更
     @GetMapping("/counts")
-    public UserCountsDto counts() {
-        return userService.getUserCounts();
+    public UserCountsDto counts(@RequestParam(required = false) String role) {
+        return userService.getUserCounts(role);
     }
 
     public static class RoleUpdateRequest {
