@@ -16,6 +16,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
+@CrossOrigin(origins = "http://localhost:5173")
 public class RoomController {
     // DI サービスに依存
     private final RoomService roomService;
@@ -46,6 +47,23 @@ public class RoomController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("room_id の重複により作成に失敗しました");
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Room の作成に失敗しました");
+        }
+    }
+
+    //ルーム終了機能
+    @PatchMapping("/{roomId}/close")
+    public ResponseEntity<?> closeRoom(@PathVariable Integer roomId) {
+        try {
+            roomService.closeRoom(roomId);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            // 指定された room が存在しないなど
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        } catch (org.springframework.dao.DuplicateKeyException ex) {
+            // ありえないはずだが安全対策
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("データの整合性エラーが発生しました");
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ルームの終了に失敗しました");
         }
     }
 }

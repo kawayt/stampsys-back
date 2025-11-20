@@ -5,7 +5,7 @@
 
     <!-- users_classesに追加(uer_id,class_idのペア）-->
     <insert id="insertUserClass" parameterType="map">
-        INSERT INTO uesrs_classes (user_id, class_id)
+        INSERT INTO users_classes (user_id, class_id)
         VALUE (#{userId}, #{classId})
     </insert>
 
