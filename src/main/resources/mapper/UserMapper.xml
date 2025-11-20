@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.stampsysback.mapper.ClassMapper">
+<mapper namespace="com.example.stampsysback.mapper.UserMapper">
 
-    <resultMap id="UserResult" type="jp.kawayt.stampsys.users.entity.User">
+    <!-- resultMap の type を実際のクラスに合わせる -->
+    <resultMap id="UserResult" type="com.example.stampsysback.entity.UserEntity">
         <id property="userId" column="user_id" />
         <result property="userName" column="user_name" />
         <result property="providerUserId" column="provider_user_id" />
@@ -18,9 +19,9 @@
         WHERE user_id = #{userId}
     </select>
 
-    <!-- userが存在するかだけチェックする（１を返す or null）（いないuser_idを追加されないため）-->
-    <select id="exitsById" parameterType="int" resultType="int">
-        SELECT 1 FROM users WHERE user_id = #{userId} LIMIT 1;
+    <!-- メソッド名を existsById に合わせる -->
+    <select id="existsById" parameterType="int" resultType="int">
+        SELECT 1 FROM users WHERE user_id = #{userId} LIMIT 1
     </select>
 
 </mapper>
