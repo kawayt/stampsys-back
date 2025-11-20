@@ -32,6 +32,6 @@ public class ApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
         // ログはサーバ側で記録してください（ここでは簡潔に処理）
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "サーバーエラーが発生しました"));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "管理者権限は最大２人を超えて付与することができません"));
     }
 }

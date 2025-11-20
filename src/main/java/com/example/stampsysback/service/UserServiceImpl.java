@@ -6,8 +6,10 @@ import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -136,7 +138,24 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto updateRole(Integer userId, String newRole) {
-        User u = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("user not found"));
+        User u = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
+
+        String prevRole = u.getRole();
+        if (newRole != null && "ADMIN".equalsIgnoreCase(newRole)) {
+            // 現在表示対象（hidden=false）での管理者数を取得
+            long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
+            // 自分が既に ADMIN ならカウントから除外（＝ロール維持は許可）
+            if (!(prevRole != null && prevRole.equalsIgnoreCase("ADMIN"))) {
+                // 新たに ADMIN を付与するケース
+                if (adminCount >= 2) {
+                    // 管理者が既に 2 人以上いるので追加不可
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "管理者権限は最大２人を超えて付与することができません");
+                }
+            }
+        }
+
         u.setRole(newRole);
         userRepository.save(u);
         return toDto(u);
@@ -145,7 +164,25 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto updateHidden(Integer userId, boolean hidden) {
-        User u = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("user not found"));
+        User u = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
+
+        // 復元（hidden=false）で、対象ユーザーの role が ADMIN の場合は
+        // 表示中の ADMIN 数をチェックして 2 人を超えないようにする
+        if (!hidden) { // false => 復元
+            String role = u.getRole();
+            if (role != null && "ADMIN".equalsIgnoreCase(role)) {
+                long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
+                // このユーザーが現在 hidden=true のため adminCount に含まれていないはずだが、
+                // 念のため自分がすでに表示中の ADMIN かどうかは prev hidden 状態で判断されるため
+                // ここでは単純に adminCount >= 2 を禁止条件とする。
+                if (adminCount >= 2) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "管理者権限は最大２人を超えて付与することができません");
+                }
+            }
+        }
+
         u.setHidden(hidden);
         userRepository.save(u);
         return toDto(u);
