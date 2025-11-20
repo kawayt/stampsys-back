@@ -50,4 +50,11 @@
         WHERE room_id = #{roomId}
     </select>
 
+    <!-- 追加: 指定 roomId の active を更新する -->
+    <update id="updateActiveById" parameterType="map">
+        UPDATE rooms
+        SET active = #{active}
+        WHERE room_id = #{roomId}
+    </update>
+
 </mapper>

@@ -14,4 +14,7 @@ public interface RoomService {
     RoomDto insertRoom(RoomForm roomForm);
 
     Integer findClassIdByRoomId(Integer roomId);
+
+    //指定 roomId の active を false にしてルームを終了する。
+    void closeRoom(Integer roomId);
 }

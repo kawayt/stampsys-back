@@ -7,6 +7,8 @@ import com.example.stampsysback.helper.RoomHelper;
 import com.example.stampsysback.mapper.ClassMapper;
 import com.example.stampsysback.mapper.RoomMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,8 @@ public class RoomServiceImpl implements RoomService{
     private final ClassMapper classMapper;
     private static final int MAX_RETRIES = 5;
     private static final long BASE_BACKOFF_MS = 50L; // 基本待ち時間（ミリ秒）
+
+    private static final Logger logger = LoggerFactory.getLogger(RoomServiceImpl.class);
 
     @Override
     public Integer findClassIdByRoomId(Integer roomId) {
@@ -83,6 +87,28 @@ public class RoomServiceImpl implements RoomService{
 
         // 理論上ここには到達しないが安全のため例外を投げる
         throw new DataAccessException("Failed to insert room (unexpected control flow)") {};
+    }
+
+    //指定したroomIdをfalseに変更する
+    @Override
+    public void closeRoom(Integer roomId) {
+        if (roomId == null) {
+            throw new IllegalArgumentException("roomId が指定されていません");
+        }
+        // 存在チェック
+        RoomEntity existing = roomMapper.selectById(roomId);
+        if (existing == null) {
+            throw new IllegalArgumentException("指定された room が見つかりません: " + roomId);
+        }
+        try {
+            int rows = roomMapper.updateActiveById(roomId, Boolean.FALSE);
+            if (rows == 0) {
+                throw new DataAccessException("active 更新が行われませんでした for roomId=" + roomId) {};
+            }
+        } catch (DataAccessException ex) {
+            logger.error("Failed to close room {}", roomId, ex);
+            throw ex;
+        }
     }
 
     /**

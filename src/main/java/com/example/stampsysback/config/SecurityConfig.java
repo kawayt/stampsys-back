@@ -14,7 +14,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableMethodSecurity
@@ -29,6 +31,10 @@ public class SecurityConfig {
 
     @Value("${app.post-logout-redirect-uri:http://localhost:5173}")
     private String postLogoutRedirectUri;
+
+    //CORS 用オリジン（カンマ区切りで複数指定可能）
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String allowedOriginsProperty;
 
     public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository,
                           CustomOidcUserService customOidcUserService) {
@@ -90,13 +96,24 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
+        // allowedOriginsProperty はカンマ区切りで複数オリジンを指定できます
+        List<String> allowedOrigins = Arrays.stream(allowedOriginsProperty.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+
         CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedOrigins(List.of("http://localhost:5173"));
         config.setAllowCredentials(true);
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         // 必要なヘッダを追加（X-XSRF-TOKEN などが使われる場合はここに追加）
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With", "*"));
+        config.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
         source.registerCorsConfiguration("/**", config);
         return source;
     }
