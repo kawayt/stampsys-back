@@ -1,26 +1,35 @@
 package com.example.stampsysback.service;
 
+import com.example.stampsysback.mapper.UsersClassesMapper;
 import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
-import com.example.stampsysback.repository.UsersClassesRepository;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * AuthorizationService - MyBatis (UsersClassesMapper) に切り替えた版
+ * 変更点:
+ * - UsersClassesMapper を注入して exists チェックを行うようにしました（JdbcTemplate 実装からの切替）。
+ * - UserRepository は引き続き使用して principal から DB user を解く resolveCurrentUserId と
+ *   isTeacherOrAdmin を提供します。
+ * - ログ出力を追加して障害時に原因が追いやすくしています。
+ */
 @Service
+@RequiredArgsConstructor
 public class AuthorizationService {
 
-    private final UsersClassesRepository usersClassesRepository;
-    private final UserRepository userRepository;
+    private static final Logger log = LoggerFactory.getLogger(AuthorizationService.class);
 
-    public AuthorizationService(UsersClassesRepository usersClassesRepository, UserRepository userRepository) {
-        this.usersClassesRepository = usersClassesRepository;
-        this.userRepository = userRepository;
-    }
+    private final UsersClassesMapper usersClassesMapper;
+    private final UserRepository userRepository;
 
     /**
      * principal から DB の userId を解くユーティリティ。
-     * AppController にあるロジックと同様の方法で providerUserId や email を用いて DB からユーザを探す。
-     * 戻り値は user.userId (Integer) か、見つからなければ null。
+     * provider 側の識別子（sub/oid/id）を優先して DB の user を探し、
+     * 見つからなければ email で検索します。見つからなければ null を返す。
      */
     public Integer resolveCurrentUserId(OAuth2User principal) {
         if (principal == null) return null;
@@ -31,36 +40,55 @@ public class AuthorizationService {
 
         User dbUser = null;
         if (providerId != null) {
-            dbUser = userRepository.findByProviderUserId(providerId).orElse(null);
+            try {
+                dbUser = userRepository.findByProviderUserId(providerId).orElse(null);
+            } catch (Exception ex) {
+                log.warn("Failed to lookup user by providerUserId={}", providerId, ex);
+            }
         }
         if (dbUser == null) {
-            // principal.getAttribute("email") を複数回呼ばないように局所変数に格納してから null チェックすることで
-            // 静的解析の「null の可能性」警告を解消します。
             Object emailObj = principal.getAttribute("email");
             String email = emailObj != null ? String.valueOf(emailObj) : null;
             if (email != null) {
-                dbUser = userRepository.findByEmail(email).orElse(null);
+                try {
+                    dbUser = userRepository.findByEmail(email).orElse(null);
+                } catch (Exception ex) {
+                    log.warn("Failed to lookup user by email={}", email, ex);
+                }
             }
         }
         return dbUser != null ? dbUser.getUserId() : null;
     }
 
+    /**
+     * 指定 userId が指定 classId に所属しているか
+     * MyBatis マッパー側で SELECT EXISTS(...) を実行する実装を想定しています。
+     */
     public boolean isUserInClass(Integer userId, Integer classId) {
         if (userId == null || classId == null) return false;
         try {
-            return usersClassesRepository.existsByUserIdAndClassId(userId, classId);
+            Boolean exists = usersClassesMapper.existsByUserIdAndClassId(userId, classId);
+            return Boolean.TRUE.equals(exists);
         } catch (Exception ex) {
-            // safe default
+            log.error("users_classes check failed for userId={}, classId={}", userId, classId, ex);
             return false;
         }
     }
 
+    /**
+     * ユーザーが TEACHER / ADMIN 権限を持つか確認
+     */
     public boolean isTeacherOrAdmin(Integer userId) {
         if (userId == null) return false;
-        return userRepository.findById(userId).map(u -> {
-            String role = u.getRole();
-            return "ADMIN".equals(role) || "TEACHER".equals(role);
-        }).orElse(false);
+        try {
+            return userRepository.findById(userId).map(u -> {
+                String role = u.getRole();
+                return "ADMIN".equals(role) || "TEACHER".equals(role);
+            }).orElse(false);
+        } catch (Exception ex) {
+            log.error("Failed to check role for userId={}", userId, ex);
+            return false;
+        }
     }
 
     private static String firstNonNullString(Object... objs) {

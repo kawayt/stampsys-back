@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stampsysback.mapper.UsersClassesMapper">
+
+    <!-- PostgreSQL 等では EXISTS が boolean を返す -->
+    <select id="existsByUserIdAndClassId" parameterType="map" resultType="java.lang.Boolean">
+        SELECT EXISTS(
+            SELECT 1 FROM users_classes uc
+            WHERE uc.user_id = #{userId} AND uc.class_id = #{classId}
+        )
+    </select>
+
+</mapper>
