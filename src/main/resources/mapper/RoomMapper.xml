@@ -79,5 +79,9 @@
         ORDER BY room_id ASC
     </select>
 
-    <!-- 既存の insert/selectById/selectMaxRoomId/findClassIdByRoomId 等は既存定義をそのまま残してください -->
+    <select id="findClassIdByRoomId" parameterType="int" resultType="int">
+        SELECT class_id
+        FROM rooms
+        WHERE room_id = #{roomId}
+    </select>
 </mapper>

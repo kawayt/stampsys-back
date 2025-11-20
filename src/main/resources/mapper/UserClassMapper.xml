@@ -44,10 +44,11 @@
     </resultMap>
 
     <!-- 追加ユーザが見えるルーム一覧を返す（そのユーザーが追加されているクラスに紐づくroom）-->
-    <select id="selectRoomByUserId" parameterType="int" resultMap="RoomResulet">
+    <select id="selectRoomByUserId" parameterType="int" resultMap="RoomResult">
         SELECT r.room_id, r.room_name, r.class_id, r.active, r.created_at
         FROM rooms r
         JOIN uers_classes uc ON r.room_id = uc.room_id
         WHERE uc.room_id = #{roomId}
         ORDER BY r.room_id
     </select>
+</mapper>
