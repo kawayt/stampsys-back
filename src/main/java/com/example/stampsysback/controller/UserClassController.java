@@ -82,12 +82,16 @@ public class UserClassController {
     public ResponseEntity<?> isUserInClass(@PathVariable Integer userId,
                                          @PathVariable Integer classId){
         try {
+            // ユーザーがクラスに紐づいているかbooleanで取得
             boolean inClass = userClassService.isUserInClass(userId, classId);
+            // Collections.singletonMap("inClass", inClass)で
+            // {"inClass": true}または{"inClass": false}というJSONと200を返す
             return ResponseEntity.ok(Collections.singletonMap("inClass", inClass));
         } catch (IllegalArgumentException ex) {
-            // クラスIdが存在しない等のバリデーションで404を返す場合
+            // クラスIdやユーザーIdが存在しない場合、サービス層でIllegalArgumentExceptionを投げて404とエラーメッセージを返す場合
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
         } catch (Exception ex) {
+            // そのほかの例外は500エラーを返す
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("failed to check user in class");
         }
     }

@@ -16,7 +16,7 @@
 
     <!-- 指定クラスに追加ユーザーがすでに追加されているかチェック、重複を防ぐため（あれば1 or null) -->
     <select id="existsRelation" parameterType="map" resultType="int">
-       SELECT 1 FROM users_classes WHERE user_id = #{userId} AMD class_id = #{classId} LIMIT 1
+       SELECT 1 FROM users_classes WHERE user_id = #{userId} AND class_id = #{classId} LIMIT 1
     </select>
 
     <resultMap id="ClassResult" type="com.example.stampsysback.entity.ClassEntity">
@@ -47,7 +47,7 @@
     <select id="selectRoomByUserId" parameterType="int" resultMap="RoomResult">
         SELECT r.room_id, r.room_name, r.class_id, r.active, r.created_at
         FROM rooms r
-        JOIN uers_classes uc ON r.room_id = uc.room_id
+        JOIN users_classes uc ON r.room_id = uc.room_id
         WHERE uc.room_id = #{roomId}
         ORDER BY r.room_id
     </select>
