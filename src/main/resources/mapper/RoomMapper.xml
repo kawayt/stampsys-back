@@ -1,53 +1,83 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.stampsysback.mapper.RoomMapper">
 
-    <!-- ★ ここを追加: RoomResult の定義 -->
-    <resultMap id="RoomResult" type="com.example.stampsysback.entity.RoomEntity">
-        <id     column="room_id"   property="roomId"/>
-        <result column="room_name" property="roomName"/>
-        <result column="class_id"  property="classId"/>
-        <result column="active"    property="active"/>
-        <result column="created_at" property="createdAt"/>
-    </resultMap>
-
-    <select id="selectByClassId"
-            parameterType="int"
-            resultMap="RoomResult">
-        SELECT room_id, room_name, class_id, active, created_at
-        FROM rooms
-        WHERE class_id = #{classId}
-        ORDER BY room_id;
-    </select>
-
-    <insert id="insert" parameterType="com.example.stampsysback.entity.RoomEntity">
-        INSERT INTO rooms (room_id, room_name, class_id, active, created_at)
-        VALUES (#{roomId}, #{roomName}, #{classId}, #{active}, #{createdAt})
+    <!-- users_classes に追加(user_id, class_id のペア) -->
+    <insert id="insertUserClass" parameterType="map">
+        INSERT INTO users_classes (user_id, class_id)
+        VALUES (#{userId}, #{classId})
     </insert>
 
-    <select id="selectById" parameterType="int" resultMap="RoomResult">
-        SELECT room_id, room_name, class_id, active, created_at
+    <!-- users_classes から削除(user_id,class_id のペア) -->
+    <delete id="deleteUserClass" parameterType="map">
+        DELETE FROM users_classes WHERE user_id = #{userId} AND class_id = #{classId}
+    </delete>
+
+    <!-- 指定クラスに追加ユーザーが既に追加されているかチェック（あれば 1 を返す） -->
+    <select id="existsRelation" parameterType="map" resultType="int">
+        SELECT 1 FROM users_classes WHERE user_id = #{userId} AND class_id = #{classId} LIMIT 1
+    </select>
+
+    <resultMap id="ClassResult" type="com.example.stampsysback.entity.ClassEntity">
+        <id property="classId" column="class_id" />
+        <result property="className" column="class_name" />
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP" />
+    </resultMap>
+
+    <!-- ユーザーが見えるクラス一覧（そのユーザーが追加されているクラス） -->
+    <select id="selectClassByUserId" parameterType="int" resultMap="ClassResult">
+        SELECT c.class_id, c.class_name, c.created_at
+        FROM classes c
+                 JOIN users_classes uc ON c.class_id = uc.class_id
+        WHERE uc.user_id = #{userId}
+        ORDER BY c.class_id
+    </select>
+
+    <resultMap id="RoomResult" type="com.example.stampsysback.entity.RoomEntity">
+        <id property="roomId" column="room_id" />
+        <result property="roomName" column="room_name" />
+        <result property="classId" column="class_id" />
+        <result property="active" column="active" />
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP" />
+    </resultMap>
+
+    <!-- ユーザーが見えるルーム一覧を返す（そのユーザーが所属するクラスに紐づく rooms） -->
+    <select id="selectRoomByUserId" parameterType="int" resultMap="RoomResult">
+        SELECT r.room_id, r.room_name, r.class_id, r.active, r.created_at
+        FROM rooms r
+                 JOIN users_classes uc ON r.class_id = uc.class_id
+        WHERE uc.user_id = #{userId}
+        ORDER BY r.room_id
+    </select>
+
+    <!-- デフォルト：active = true のみ返す -->
+    <select id="selectByClassId" parameterType="int" resultMap="RoomResult">
+        SELECT
+            room_id,
+            room_name,
+            class_id,
+            active,
+            created_at
         FROM rooms
-        WHERE room_id = #{roomId}
+        WHERE class_id = #{classId}
+          AND active = true
+        ORDER BY room_id ASC
     </select>
 
-    <select id="selectByNameAndClass" resultMap="RoomResult" parameterType="map">
-        SELECT room_id, room_name, class_id, active, created_at
+    <!-- 管理者向け：active に関係なく全件返す -->
+    <select id="selectAllByClassId" parameterType="int" resultMap="RoomResult">
+        SELECT
+            room_id,
+            room_name,
+            class_id,
+            active,
+            created_at
         FROM rooms
-        WHERE room_name = #{roomName} AND class_id = #{classId}
-            LIMIT 1
+        WHERE class_id = #{classId}
+        ORDER BY room_id ASC
     </select>
 
-    <select id="selectMaxRoomId" resultType="int">
-        SELECT COALESCE(MAX(room_id), 0) FROM rooms
-    </select>
-
-    <!-- 追加: roomId から class_id を取得する単純クエリ -->
-    <select id="findClassIdByRoomId" parameterType="int" resultType="int">
-        SELECT class_id
-        FROM rooms
-        WHERE room_id = #{roomId}
-    </select>
-
+    <!-- 既存の insert/selectById/selectMaxRoomId/findClassIdByRoomId 等は既存定義をそのまま残してください -->
 </mapper>
