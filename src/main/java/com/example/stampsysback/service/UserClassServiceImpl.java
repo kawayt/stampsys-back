@@ -1,5 +1,11 @@
 package com.example.stampsysback.service;
 
+
+import com.example.stampsysback.dto.ClassDto;
+import com.example.stampsysback.dto.RoomDto;
+import com.example.stampsysback.entity.ClassEntity;
+import com.example.stampsysback.entity.RoomEntity;
+import com.example.stampsysback.helper.RoomHelper;
 import com.example.stampsysback.mapper.ClassMapper;
 import com.example.stampsysback.mapper.UserClassMapper;
 import com.example.stampsysback.mapper.UserMapper;
@@ -7,6 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -55,4 +64,38 @@ public class UserClassServiceImpl implements UserClassService{
         return rows;
     }
 
+    @Override
+    // 指定ユーザーが指定クラスに所属しているか
+    public boolean isUserInClass(Integer userId, Integer classId){
+        Integer rel = userClassMapper.existsRelation(userId, classId);
+        // 存在すれば何らかの値、存在しなければnullを返す
+        return rel != null;
+    }
+
+    // 指定ユーザーが見えるクラス一覧
+    @Override
+    // ClassDtoに変換して返す
+    public List<ClassDto> getClassForUser(Integer userId) {
+        // userClassMapperを使って、指定されたuserIdに紐づくクラス一覧を取得
+        List<ClassEntity> classEntity = userClassMapper.selectClassByUserId(userId);
+        // 取得したclassEntityリストをStream API（ClassDto）に変換
+        return classEntity.stream()
+                // ClassEntityオブジェクトcをClassDtoに変換処理
+                .map(c -> new ClassDto(c.getClassId(), c.getClassName(), c.getCreatedAt()))
+                // Stream（変換後のClassDtoオブジェクト）をListにまとめて返す
+                .collect(Collectors.toList());
+    }
+
+    // 指定ユーザーが見えるルーム一覧
+    @Override
+    public List<RoomDto> getRoomForUser(Integer userId) {
+        // userClassMapperを使って、指定されたuserIdに紐づくルーム一覧を取得
+        List<RoomEntity> roomEntity = userClassMapper.selectRoomByUserId(userId);
+        // roomsをStreamに変換
+        return roomEntity.stream()
+                // RoomEntityオブジェクトをRoomDtoに変換処理(RoomHelperがもともとあるからそれ使う）
+                .map(RoomHelper::toDto)
+                // Stream（変換後のRoomDtoオブジェクト）をListにまとめて返す
+                .collect(Collectors.toList());
+    }
 }
