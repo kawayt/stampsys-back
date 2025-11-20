@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stampsysback.mapper.ClassMapper">
+
+    <resultMap id="UserResult" type="jp.kawayt.stampsys.users.entity.User">
+        <id property="userId" column="user_id" />
+        <result property="userName" column="user_name" />
+        <result property="providerUserId" column="provider_user_id" />
+        <result property="email" column="email" />
+        <result property="role" column="role" />
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP" />
+    </resultMap>
+
+    <select id="selectById" parameterType="int" resultMap="UserResult">
+        SELECT user_id, user_name, provider_user_id, email, role, created_at
+        FROM users
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- userが存在するかだけチェックする（１を返す or null）（いないuser_idを追加されないため）-->
+    <select id="exitsById" parameterType="int" resultType="int">
+        SELECT 1 FROM users WHERE user_id = #{userId} LIMIT 1;
+    </select>
+
+</mapper>

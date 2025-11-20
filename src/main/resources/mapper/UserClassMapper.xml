@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stampsysback.mapper.ClassMapper">
+
+    <!-- users_classesに追加(uer_id,class_idのペア）-->
+    <insert id="insertUserClass" parameterType="map">
+        INSERT INTO uesrs_classes (user_id, class_id)
+        VALUE (#{userId}, #{classId})
+    </insert>
+
+    <!-- users_classesから削除(user_id,class_idのペア）-->
+    <delete id="deleteUserClass" parameterType="map">
+        DELETE FROM users_classes WHERE user_id = #{userId} AND class_id = #{classId}
+    </delete>
+
+    <!-- 指定クラスに追加ユーザーがすでに追加されているかチェック、重複を防ぐため（あれば1 or null) -->
+    <select id="existsRelation" parameterType="map" resultType="int">
+       SELECT 1 FROM users_classes WHERE user_id = #{userId} AMD class_id = #{classId} LIMIT 1
+    </select>
+
+    <resultMap id="ClassResult" type="com.example.stampsysback.entity.ClassEntity">
+        <id property="classId" column="class_id" />
+        <result property="className" column="class_name" />
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP" />
+    </resultMap>
+
+    <!-- 追加ユーザーが見えるクラス一覧を返す -->
+    <select id="selectClassByUserId" parameterType="int" resultMap="ClassResult">
+        SELECT c.class_id, c.class_name, c.created_at
+        FROM classes c
+        <!-- 結合 -->
+        JOIN users_classes uc ON c.class_id = uc.class_id
+        WHERE uc.user_id = #{userId}
+        ORDER BY c.class_id
+    </select>
+
+    <resultMap id="RoomResult" type="com.example.stampsysback.entity.RoomEntity">
+        <id property="roomId" column="room_id" />
+        <result property="roomName" column="room_name" />
+        <result property="classId" column="class_id" />
+        <result property="active" column="active" />
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP" />
+    </resultMap>
+
+    <!-- 追加ユーザが見えるルーム一覧を返す（そのユーザーが追加されているクラスに紐づくroom）-->
+    <select id="selectRoomByUserId" parameterType="int" resultMap="RoomResulet">
+        SELECT r.room_id, r.room_name, r.class_id, r.active, r.created_at
+        FROM rooms r
+        JOIN uers_classes uc ON r.room_id = uc.room_id
+        WHERE uc.room_id = #{roomId}
+        ORDER BY r.room_id
+    </select>

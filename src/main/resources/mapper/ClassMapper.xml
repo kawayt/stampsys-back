@@ -19,6 +19,6 @@
 
     <!-- 指定したclass_idが存在するか確認 -->
     <select id="existsById" parameterType="int" resultType="int">
-        SELECT 1 FROM classes WHERE class_id = #{classId} LIMIT 1
+        SELECT 1 FROM classes WHERE class_id = #{classId} LIMIT 1;
     </select>
 </mapper>
