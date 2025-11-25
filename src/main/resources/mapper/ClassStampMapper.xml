@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.stampsysback.mapper.ClassStampMapper">
+
+    <!-- 設定画面用：全件 + 状態取得 -->
+    <select id="findAllWithAssignmentStatus" resultType="com.example.stampsysback.entity.StampManagementEntity">
+        SELECT
+            s.stamp_id      AS stampId,
+            s.stamp_name    AS stampName,
+            s.stamp_icon    AS stampIcon,
+            s.stamp_color   AS stampColor,
+            s.stamp_deleted AS stampDeleted,
+            -- ここで判定：中間テーブル(sc)があれば TRUE、なければ FALSE
+            CASE
+                WHEN sc.class_id IS NOT NULL THEN TRUE
+                ELSE FALSE
+                END  AS isAssigned
+        FROM stamps s
+                 -- LEFT JOIN: 全スタンプを表示しつつ、設定があれば結合する
+                 LEFT JOIN stamps_classes sc
+                           ON s.stamp_id = sc.stamp_id
+                               AND sc.class_id = #{classId}
+        WHERE s.stamp_deleted = FALSE
+        ORDER BY s.stamp_id
+    </select>
+
+    <!-- クラスに紐づいたスタンプを取得 -->
+    <select id="findByClassId" resultType="com.example.stampsysback.entity.StampManagementEntity">
+        SELECT
+            s.stamp_id      AS stampId,
+            s.stamp_name    AS stampName,
+            s.stamp_icon    AS stampIcon,
+            s.stamp_color   AS stampColor,
+            s.stamp_deleted AS stampDeleted
+        FROM stamps s
+        INNER JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
+        WHERE sc.class_id = #{classId} AND s.stamp_deleted = FALSE
+        ORDER BY s.stamp_id
+    </select>
+
+    <!-- クラスにスタンプを割り当てる -->
+    <insert id="assignStampToClass" parameterType="com.example.stampsysback.entity.ClassStampEntity">
+        INSERT INTO stamps_classes (class_id, stamp_id)
+        VALUES (#{classId}, #{stampId})
+            ON CONFLICT (class_id, stamp_id) DO NOTHING
+    </insert>
+
+    <!-- クラスからスタンプの割り当てを解除する -->
+    <delete id="removeStampFromClass" parameterType="com.example.stampsysback.entity.ClassStampEntity">
+        DELETE FROM stamps_classes
+        WHERE class_id = #{classId} AND stamp_id = #{stampId}
+    </delete>
+
+</mapper>
