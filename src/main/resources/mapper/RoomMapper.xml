@@ -35,8 +35,8 @@
     </select>
 
     <insert id="insert" parameterType="com.example.stampsysback.entity.RoomEntity">
-        INSERT INTO rooms (room_id, room_name, class_id, active, hidden, created_at)
-        VALUES (#{roomId}, #{roomName}, #{classId}, #{active}, #{hidden}, #{createdAt})
+        INSERT INTO rooms (room_id, room_name, class_id, active, created_at)
+        VALUES (#{roomId}, #{roomName}, #{classId}, #{active}, #{createdAt})
     </insert>
 
     <select id="selectMaxRoomId" resultType="java.lang.Integer">
