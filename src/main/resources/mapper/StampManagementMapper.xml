@@ -18,6 +18,37 @@
         ORDER BY stamp_id;
     </select>
 
+    <!-- 追加: 指定クラスに紐づく（assigned）スタンプ一覧 -->
+    <select id="selectStampsByClassId" parameterType="int" resultType="com.example.stampsysback.dto.StampManagementResponse">
+        SELECT
+            s.stamp_id    AS stampId,
+            s.stamp_name  AS stampName,
+            s.stamp_icon  AS stampIcon,
+            s.stamp_color AS stampColor,
+            TRUE          AS assigned
+        FROM stamps s
+                 INNER JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
+        WHERE sc.class_id = #{classId}
+          AND s.stamp_deleted = FALSE
+        ORDER BY s.stamp_id
+    </select>
+
+    <!-- 追加: 指定クラスに紐づいていない（unassigned）スタンプ一覧 -->
+    <select id="selectStampsNotInClassId" parameterType="int" resultType="com.example.stampsysback.dto.StampManagementResponse">
+        SELECT
+            s.stamp_id    AS stampId,
+            s.stamp_name  AS stampName,
+            s.stamp_icon  AS stampIcon,
+            s.stamp_color AS stampColor,
+            FALSE         AS assigned
+        FROM stamps s
+        WHERE s.stamp_deleted = FALSE
+          AND NOT EXISTS (
+            SELECT 1 FROM stamps_classes sc WHERE sc.stamp_id = s.stamp_id AND sc.class_id = #{classId}
+        )
+        ORDER BY s.stamp_id
+    </select>
+
     <!-- 新しいスタンプ追加 -->
     <insert id="insert" parameterType="com.example.stampsysback.dto.StampManagementRequest" useGeneratedKeys="true" keyProperty="stampId">
         INSERT INTO stamps (stamp_name, stamp_icon, stamp_color)
