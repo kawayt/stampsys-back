@@ -11,4 +11,5 @@ public class RoomEntity {
     private Integer classId;
     private OffsetDateTime createdAt;
     private Boolean active;
+    private Boolean hidden;
 }
