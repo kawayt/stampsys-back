@@ -1,6 +1,7 @@
 package com.example.stampsysback.mapper;
 
-import com.example.stampsysback.entity.StampManagementEntity;
+import com.example.stampsysback.dto.StampManagementRequest;
+import com.example.stampsysback.dto.StampManagementResponse;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
@@ -9,11 +10,11 @@ import java.util.List;
 public interface StampManagementMapper {
 
     // スタンプ一覧取得
-    List<StampManagementEntity> findAll();
+    List<StampManagementResponse> findAll();
 
     // 新しいスタンプ追加
-    void insert(StampManagementEntity stamp);
+    void insert(StampManagementRequest dto);
 
-    // スタンプ削除
+    // スタンプ論理削除
     void delete(@Param("stampId") int stampId);
 }

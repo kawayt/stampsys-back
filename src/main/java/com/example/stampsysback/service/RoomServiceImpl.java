@@ -116,6 +116,33 @@ public class RoomServiceImpl implements RoomService{
         }
     }
 
+    //指定したroomIdをfalseに変更する
+    @Override
+    public void deleteRoom(Integer roomId) {
+        if (roomId == null) {
+            throw new IllegalArgumentException("roomId が指定されていません");
+        }
+        logger.debug("deleteRoom called for roomId={}", roomId);
+
+        // 存在チェック
+        RoomEntity existing = roomMapper.selectById(roomId);
+        logger.debug("existing room (selectById) result: {}", existing);
+
+        if (existing == null) {
+            throw new IllegalArgumentException("指定された room が見つかりません: " + roomId);
+        }
+        try {
+            int rows = roomMapper.updateHiddenById(roomId, Boolean.TRUE);
+            logger.debug("updateHiddenById affected rows: {}", rows);
+            if (rows == 0) {
+                throw new DataAccessException("hidden 更新が行われませんでした for roomId=" + roomId) {};
+            }
+        } catch (DataAccessException ex) {
+            logger.error("Failed to delete room {}", roomId, ex);
+            throw ex;
+        }
+    }
+
     /**
      * 指数バックオフ（base * 2^(attempt-1)）にランダムジッタを加えた待機時間（ミリ秒）を返す。
      * attempt は 1 から始まる試行回数。

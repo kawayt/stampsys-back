@@ -8,34 +8,35 @@
         <result column="room_name" property="roomName"/>
         <result column="class_id"  property="classId"/>
         <result column="active"    property="active"/>
+        <result column="hidden"    property="hidden" />
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
     </resultMap>
 
     <select id="selectByClassId"
             parameterType="int"
             resultMap="RoomResult">
-        SELECT room_id, room_name, class_id, active, created_at
+        SELECT room_id, room_name, class_id, active, hidden, created_at
         FROM rooms
-        WHERE class_id = #{classId}
+        WHERE class_id = #{classId} AND hidden = false
         ORDER BY room_id DESC
     </select>
 
     <select id="selectAllByClassId" parameterType="int" resultMap="RoomResult">
-        SELECT room_id, room_name, class_id, active, created_at
+        SELECT room_id, room_name, class_id, active, hidden, created_at
         FROM rooms
-        WHERE class_id = #{classId}
+        WHERE class_id = #{classId} AND hidden = false
         ORDER BY room_id DESC
     </select>
 
     <select id="selectById" parameterType="int" resultMap="RoomResult">
-        SELECT room_id, room_name, class_id, active, created_at
+        SELECT room_id, room_name, class_id, active, hidden, created_at
         FROM rooms
         WHERE room_id = #{roomId}
     </select>
 
     <insert id="insert" parameterType="com.example.stampsysback.entity.RoomEntity">
-        INSERT INTO rooms (room_id, room_name, class_id, active, created_at)
-        VALUES (#{roomId}, #{roomName}, #{classId}, #{active}, #{createdAt})
+        INSERT INTO rooms (room_id, room_name, class_id, active, hidden, created_at)
+        VALUES (#{roomId}, #{roomName}, #{classId}, #{active}, #{hidden}, #{createdAt})
     </insert>
 
     <select id="selectMaxRoomId" resultType="java.lang.Integer">
@@ -54,10 +55,17 @@
         WHERE room_id = #{roomId}
     </update>
 
+    <update id="updateHiddenById">
+        UPDATE rooms
+        SET hidden = #{hidden}
+        WHERE room_id = #{roomId}
+    </update>
+
+
     <select id="selectByNameAndClass" resultMap="RoomResult" parameterType="map">
-        SELECT room_id, room_name, class_id, active, created_at
+        SELECT room_id, room_name, class_id, active, hidden, created_at
         FROM rooms
-        WHERE room_name = #{roomName} AND class_id = #{classId}
+        WHERE room_name = #{roomName} AND class_id = #{classId} AND hidden = false
             LIMIT 1
     </select>
 

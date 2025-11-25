@@ -1,7 +1,9 @@
 package com.example.stampsysback.controller;
 
-import com.example.stampsysback.entity.StampManagementEntity;
+import com.example.stampsysback.dto.StampManagementRequest;
+import com.example.stampsysback.dto.StampManagementResponse;
 import com.example.stampsysback.mapper.StampManagementMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,20 +19,19 @@ public class StampManagementController {
 
     // スタンプ一覧取得（全件）
     @GetMapping
-    public List<StampManagementEntity> getAllStamps() {
+    public List<StampManagementResponse> getAllStamps() {
         return stampManagementMapper.findAll();
     }
 
     // 新しいスタンプの追加
     @PostMapping
-    public void addStamp(@RequestBody StampManagementEntity stamp) {
-        stampManagementMapper.insert(stamp);
+    public void addStamp(@RequestBody @Valid StampManagementRequest dto) {
+        stampManagementMapper.insert(dto);
     }
 
-    // スタンプの削除
+    // スタンプ論理削除
     @DeleteMapping("/{stampId}")
     public void deleteStamp(@PathVariable int stampId) {
         stampManagementMapper.delete(stampId);
     }
 }
-

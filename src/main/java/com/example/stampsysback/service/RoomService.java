@@ -17,4 +17,7 @@ public interface RoomService {
 
     //指定 roomId の active を false にしてルームを終了する。
     void closeRoom(Integer roomId);
+
+    //指定 roomId の hidden を true にしてルームを削除する。
+    void deleteRoom(Integer roomId);
 }

@@ -66,4 +66,21 @@ public class RoomController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ルームの終了に失敗しました");
         }
     }
+
+    //ルーム削除機能
+    @PatchMapping("/{roomId}/delete")
+    public ResponseEntity<?> deleteRoom(@PathVariable Integer roomId) {
+        try {
+            roomService.deleteRoom(roomId);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            // 指定された room が存在しないなど
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        } catch (org.springframework.dao.DuplicateKeyException ex) {
+            // ありえないはずだが安全対策
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("データの整合性エラーが発生しました");
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ルームの削除に失敗しました");
+        }
+    }
 }

@@ -25,4 +25,7 @@ public interface RoomMapper {
     //指定 roomId の active を更新する
     int updateActiveById(@Param("roomId") Integer roomId, @Param("active") Boolean active);
 
+    //指定 roomId の hidden を更新する
+    int updateHiddenById(@Param("roomId") Integer roomId, @Param("hidden") Boolean hidden);
+
 }

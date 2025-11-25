@@ -59,6 +59,7 @@ public class SecurityConfig {
                                 "/api/stamp-management/**",
                                 "/api/rooms/*/stamp-activity",
                                 "/api/rooms/*/close",
+                                "/api/rooms/*/delete",
                                 "/static/**",
                                 "/favicon.ico",
                                 // ここを permitAll に追加: setup ページと API （初期化）
