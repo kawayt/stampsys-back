@@ -110,8 +110,11 @@ public class CustomOidcUserService extends OidcUserService {
                 dbUser = userRepository.findByEmail(email).orElse(null);
             }
 
-            if (dbUser != null && "ADMIN".equals(dbUser.getRole())) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            // ここを汎用化：DB に role があれば ROLE_<ROLE> を付与する
+            if (dbUser != null && dbUser.getRole() != null && !dbUser.getRole().isBlank()) {
+                String roleName = dbUser.getRole().toUpperCase().trim();
+                // 例: "TEACHER" -> "ROLE_TEACHER"
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + roleName));
             }
         } catch (Exception ex) {
             logger.warn("Failed to load DB user for authority mapping", ex);
