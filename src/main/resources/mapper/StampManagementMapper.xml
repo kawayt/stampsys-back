@@ -1,27 +1,35 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.example.stampsysback.mapper.StampManagementMapper">
 
     <!-- スタンプ一覧取得 -->
-    <select id="findAll" resultType="com.example.stampsysback.entity.StampManagementEntity">
+    <select id="findAll" resultType="com.example.stampsysback.dto.StampManagementResponse">
         SELECT
-            stamp_id AS stampId,
-            stamp_name AS stampName,
-            stamp_icon AS stampIcon,
-            stamp_color AS stampColor
+        stamp_id    AS stampId,
+        stamp_name  AS stampName,
+        stamp_icon  AS stampIcon,
+        stamp_color AS stampColor,
+        FALSE AS assigned
         FROM stamps
+        WHERE stamp_deleted = FALSE
+        ORDER BY stamp_id;
     </select>
 
     <!-- 新しいスタンプ追加 -->
-    <insert id="insert" parameterType="com.example.stampsysback.entity.StampManagementEntity">
+    <insert id="insert" parameterType="com.example.stampsysback.dto.StampManagementRequest" useGeneratedKeys="true" keyProperty="stampId">
         INSERT INTO stamps (stamp_name, stamp_icon, stamp_color)
         VALUES (#{stampName}, #{stampIcon}, #{stampColor})
     </insert>
 
-    <!-- スタンプ削除 -->
-    <delete id="delete" parameterType="int">
-        DELETE FROM stamps WHERE stamp_id = #{stampId}
-    </delete>
+    <!-- スタンプ論理削除 -->
+    <!-- TRUE：削除 | FALSE：有効 -->
+    <update id="delete" parameterType="int">
+        UPDATE stamps
+        SET stamp_deleted = TRUE
+        WHERE stamp_id = #{stampId}
+    </update>
 
 </mapper>
