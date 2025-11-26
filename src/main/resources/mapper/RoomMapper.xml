@@ -78,4 +78,11 @@
             LIMIT 1
     </select>
 
+    <!-- 指定したクラスのactive=trueをfalseにする -->
+    <update id="updateDeactivateByClassId" parameterType="int">
+        UPDATE rooms
+        SET active = FALSE
+        WHERE class_id = #{classId} AND active = TRUE
+    </update>
+
 </mapper>

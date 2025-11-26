@@ -24,4 +24,41 @@
         SELECT 1 FROM users WHERE user_id = #{userId} LIMIT 1
     </select>
 
+    <!-- 追加済みユーザー一覧 -->
+    <select id="selectUsersInClass" resultType="com.example.stampsysback.dto.UserDto" parameterType="map">
+        SELECT u.user_id AS userId,
+               u.user_name AS userName,
+               u.email AS email
+        FROM users u
+        JOIN users_classes uc ON u.user_id = uc.user_id
+        WHERE uc.class_id = #{classId}
+        ORDER BY u.user_name
+        <if test = "limit != null">
+            LIMIT #{limit}
+        </if>
+        <if test = "offset != null">
+            OFFSET #{offset}
+        </if>
+    </select>
+
+    <!-- 未追加ユーザー一覧 -->
+    <select id="selectUsersNotClass" resultType="com.example.stampsysback.dto.UserDto" parameterType="map">
+            SELECT u.user_id AS userId,
+    u.user_name AS userName,
+    u.email AS email
+    FROM users u
+    <!-- サブクエリが一行も帰らない場合true -->
+    <!-- このクラスにまだ追加されていないユーザーだけを取得 -->
+    WHERE NOT EXISTS (
+        SELECT 1 FROM users_classes uc WHERE uc.user_id = u.user_id AND uc.class_id = #{classId}
+    )
+    ORDER BY u.user_name
+    <if test="limit != null">
+        LIMIT #{limit}
+    </if>
+    <if test="offset != null">
+        OFFSET #{offset}
+    </if>
+    </select>
+
 </mapper>

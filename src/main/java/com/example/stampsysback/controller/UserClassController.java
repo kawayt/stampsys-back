@@ -2,6 +2,7 @@ package com.example.stampsysback.controller;
 
 import com.example.stampsysback.dto.ClassDto;
 import com.example.stampsysback.dto.RoomDto;
+import com.example.stampsysback.dto.UserDto;
 import com.example.stampsysback.mapper.UserMapper;
 import com.example.stampsysback.service.UserClassService;
 import lombok.RequiredArgsConstructor;
@@ -115,8 +116,33 @@ public class UserClassController {
         try{
             List<RoomDto> rooms = userClassService.getRoomForUser(userId);
             return ResponseEntity.ok(rooms);
+            // 例外発生
         } catch (Exception ex) {
+            // 500 INTERNAL_SERVER_ERRORは「サーバー内部で予期せぬエラーが起きた」という意味
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("failed to get rooms for user");
         }
     }
+
+    // 追加済みユーザー一覧
+    // GET/api/classes/{classId}/users/in?limit=0&offset=0
+    @GetMapping("/classes/{classId}/users/in")
+    public ResponseEntity<List<UserDto>> getUserInClass(@PathVariable Integer classId,
+                                            // そのパラメーターがなくてもエラーにしないでnullを許容
+                                            @RequestParam(required = false) Integer limit,
+                                            @RequestParam(required = false) Integer offset){
+        List<UserDto> list = userMapper.selectUsersInClass(classId, limit, offset);
+        // 200 OKとユーザーリストを返す
+        return ResponseEntity.ok(list);
+    }
+
+    // 未追加ユーザー一覧
+    // GET/api/classes/{classId}/users/not-in?limit=0&offset=0
+    @GetMapping("classes/{classId}/users/not-in")
+    public ResponseEntity<List<UserDto>> getUserNotInClass(@PathVariable Integer classId,
+                                                           @RequestParam(required = false) Integer limit,
+                                                           @RequestParam(required = false) Integer offset){
+        List<UserDto> list = userMapper.selectUsersNotInClass(classId, limit,offset);
+        return ResponseEntity.ok(list);
+    }
+
 }

@@ -28,6 +28,9 @@ public interface RoomMapper {
     //指定 roomId の hidden を更新する
     int updateHiddenById(@Param("roomId") Integer roomId, @Param("hidden") Boolean hidden);
 
+    // 指定したclassIdに紐づくactive=trueのルームをすべてfalseにする
+    int updateDeactivateByClassId(@Param("classId") Integer classId);
+
     //指定されたClassIdに紐づく、最新のactiveなroomIdを返す
     Integer selectLatestActiveRoomIdByClassId(@Param("classId") Integer classId);
 }

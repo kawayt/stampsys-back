@@ -49,6 +49,15 @@ public class RoomServiceImpl implements RoomService{
             throw new IllegalArgumentException("指定された classId が存在しません: " + roomForm.getClassId());
         }
 
+        // 同クラスでactive = trueのルームをすべてfalseにする
+        try{
+            int deactivated = roomMapper.updateDeactivateByClassId(roomForm.getClassId());
+            logger.debug("updateDeactivateByClassId affected rows: {}", deactivated);
+        } catch (DataAccessException ex){
+            logger.error("Failed to deactivate existing active rooms for classId={}", roomForm.getClassId(), ex);
+            throw ex;
+        }
+
         // RoomFormをRoomEntityに変換
         RoomEntity toInsert = RoomHelper.toEntity(roomForm);
 
