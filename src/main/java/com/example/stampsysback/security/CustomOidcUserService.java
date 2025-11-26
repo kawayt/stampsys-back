@@ -8,6 +8,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
@@ -110,12 +112,23 @@ public class CustomOidcUserService extends OidcUserService {
                 dbUser = userRepository.findByEmail(email).orElse(null);
             }
 
+            // 追加: hidden フラグが立っているユーザはログイン不可にする
+            if (dbUser != null && dbUser.isHidden()) {
+                // エラーメッセージは内部ログに残すが、外部には一般的なメッセージを返す
+                logger.info("Authentication denied for hidden user providerUserId={}, userId={}", providerUserId, dbUser.getUserId());
+                OAuth2Error error = new OAuth2Error("access_denied", "アカウントは無効化されています", null);
+                throw new OAuth2AuthenticationException(error);
+            }
+
             // ここを汎用化：DB に role があれば ROLE_<ROLE> を付与する
             if (dbUser != null && dbUser.getRole() != null && !dbUser.getRole().isBlank()) {
                 String roleName = dbUser.getRole().toUpperCase().trim();
                 // 例: "TEACHER" -> "ROLE_TEACHER"
                 authorities.add(new SimpleGrantedAuthority("ROLE_" + roleName));
             }
+        } catch (OAuth2AuthenticationException oae) {
+            // 再スローして Spring Security に失敗を伝える
+            throw oae;
         } catch (Exception ex) {
             logger.warn("Failed to load DB user for authority mapping", ex);
         }

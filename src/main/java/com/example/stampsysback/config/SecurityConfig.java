@@ -35,6 +35,10 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String allowedOriginsProperty;
 
+    // フロントのベース URL（dev: http://localhost:5173 をデフォルト）
+    @Value("${app.frontend.base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
     public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository,
                           CustomOidcUserService customOidcUserService) {
         this.clientRegistrationRepository = clientRegistrationRepository;
@@ -86,6 +90,16 @@ public class SecurityConfig {
                         .loginPage("/oauth2/authorization/" + oauth2RegistrationId)
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserService))
                         .defaultSuccessUrl("http://localhost:5173", true)
+                        // 追加: 認証失敗時はフロントの /login-disabled へリダイレクトする
+                        .failureHandler((request, response, exception) -> {
+                            String redirect;
+                            if (frontendBaseUrl != null && !frontendBaseUrl.isBlank()) {
+                                redirect = frontendBaseUrl + "/login-disabled";
+                            } else {
+                                redirect = "/login-disabled";
+                            }
+                            response.sendRedirect(redirect);
+                        })
                 )
                 .logout(logout -> logout
                         .invalidateHttpSession(true)
