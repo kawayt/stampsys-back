@@ -61,11 +61,20 @@
         WHERE room_id = #{roomId}
     </update>
 
-
     <select id="selectByNameAndClass" resultMap="RoomResult" parameterType="map">
         SELECT room_id, room_name, class_id, active, hidden, created_at
         FROM rooms
         WHERE room_name = #{roomName} AND class_id = #{classId} AND hidden = false
+            LIMIT 1
+    </select>
+
+    <!-- 追加: 指定クラスに紐づく最新の active=true な room の room_id を1件取得 -->
+    <select id="selectLatestActiveRoomIdByClassId" parameterType="int" resultType="java.lang.Integer">
+        SELECT room_id
+        FROM rooms
+        WHERE class_id = #{classId}
+          AND active = TRUE
+        ORDER BY created_at DESC
             LIMIT 1
     </select>
 

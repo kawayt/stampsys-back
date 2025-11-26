@@ -144,6 +144,18 @@ public class RoomServiceImpl implements RoomService{
     }
 
     /**
+     * 指定したClassIdに紐づく、activeな最新のルームを返す。
+     */
+    @Override
+    public Integer findLatestActiveRoomIdByClassId(Integer classId) {
+        if (classId == null) {
+            throw new IllegalArgumentException("classId が指定されていません");
+        }
+        // Mapper が存在しなければ null を返す設計（呼び出し側で 404 にする）
+        return roomMapper.selectLatestActiveRoomIdByClassId(classId);
+    }
+
+    /**
      * 指数バックオフ（base * 2^(attempt-1)）にランダムジッタを加えた待機時間（ミリ秒）を返す。
      * attempt は 1 から始まる試行回数。
      */

@@ -20,4 +20,10 @@ public interface RoomService {
 
     //指定 roomId の hidden を true にしてルームを削除する。
     void deleteRoom(Integer roomId);
+
+    /**
+     * 指定クラスに紐づく最新の active=true なルームの roomId を返す。
+     * 存在しない場合は null を返す（Controller 側で 404 にする想定）。
+     */
+    Integer findLatestActiveRoomIdByClassId(Integer classId);
 }
