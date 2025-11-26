@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.stampsysback.mapper.NoteMapper">
+
+    <resultMap id="NoteResultMap" type="com.example.stampsysback.model.Note">
+        <id column="note_id" property="noteId" />
+        <result column="note_text" property="noteText" />
+        <result column="room_id" property="roomId" />
+        <result column="hidden" property="hidden" />
+        <result column="created_at" property="createdAt" />
+    </resultMap>
+
+    <!-- DB 側の DEFAULT now() に任せるため created_at は INSERT に含めない -->
+    <insert id="insert" parameterType="com.example.stampsysback.model.Note" useGeneratedKeys="true" keyProperty="noteId" keyColumn="note_id">
+        INSERT INTO notes (note_text, room_id, hidden)
+        VALUES (#{noteText}, #{roomId}, #{hidden, jdbcType=BOOLEAN, javaType=java.lang.Boolean})
+    </insert>
+
+    <select id="selectByRoom" resultMap="NoteResultMap" parameterType="int">
+        SELECT note_id, note_text, room_id, hidden, created_at
+        FROM notes
+        WHERE room_id = #{roomId} AND hidden = false
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByRoomIncludeHidden" resultMap="NoteResultMap" parameterType="int">
+        SELECT note_id, note_text, room_id, hidden, created_at
+        FROM notes
+        WHERE room_id = #{roomId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectById" resultMap="NoteResultMap" parameterType="int">
+        SELECT note_id, note_text, room_id, hidden, created_at
+        FROM notes
+        WHERE note_id = #{noteId}
+    </select>
+
+    <update id="updateHidden" parameterType="map">
+        UPDATE notes
+        SET hidden = #{hidden}
+        WHERE note_id = #{noteId}
+    </update>
+
+</mapper>
