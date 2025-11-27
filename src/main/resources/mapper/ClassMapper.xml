@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.stampsysback.mapper.ClassMapper">
-    <!-- クラス一覧を取得 -->
+    <!-- 【編集】クラス一覧を取得 -->
     <select id="selectAll" resultType="com.example.stampsysback.entity.ClassEntity">
-        SELECT class_id, class_name, created_at FROM classes ORDER BY class_id;
+        SELECT class_id, class_name, created_at, deleted_at FROM classes WHERE deleted_at IS NULL ORDER BY class_id;
     </select>
 
     <!-- クラス作成 -->
@@ -21,4 +21,18 @@
     <select id="existsById" parameterType="int" resultType="int">
         SELECT 1 FROM classes WHERE class_id = #{classId} LIMIT 1;
     </select>
+
+    <!-- 【追加】論理削除 -->
+    <update id="softDelete">
+        UPDATE classes
+        SET deleted_at = #{deletedAt}
+        WHERE class_id = #{classId};
+    </update>
+    <!-- 【追加】復元機能 -->
+    <update id="restore">
+        UPDATE classes
+        SET deleted_at = NULL
+        WHERE class_id = #{classId};
+    </update>
+
 </mapper>

@@ -4,6 +4,7 @@ import com.example.stampsysback.entity.ClassEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Mapper
@@ -19,4 +20,9 @@ public interface ClassMapper {
 
     // classIdの存在確認、存在すれば1、存在しなければ0を返す
     Integer existsById(@Param("classId") Integer classId);
+
+    // 【追加】論理削除
+    void softDelete(@Param("classId") Integer classId, @Param("deletedAt") OffsetDateTime deletedAt);
+    // 【追加】復元
+    void restore(@Param("classId") Integer classId);
 }
