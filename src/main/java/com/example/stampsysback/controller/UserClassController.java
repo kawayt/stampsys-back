@@ -18,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
 public class UserClassController {
     private final UserClassService userClassService;
     private final UserMapper userMapper;
@@ -25,7 +26,7 @@ public class UserClassController {
     // 指定クラスにユーザーを追加
     // POST/api/classes/{classId}/users/ ← @PathVariable
     // Body: { "userId": 1 } ←　@RequestBody
-    @PostMapping("/classes/{classId}/users/")
+    @PostMapping("/classes/{classId}/users")
     public ResponseEntity<?> addUserToClass(@PathVariable Integer classId,
                                             @RequestBody Map<String, Integer> body){
         // bodyからuserIdを取得
@@ -137,7 +138,7 @@ public class UserClassController {
 
     // 未追加ユーザー一覧
     // GET/api/classes/{classId}/users/not-in?limit=0&offset=0
-    @GetMapping("classes/{classId}/users/not-in")
+    @GetMapping("/classes/{classId}/users/not-in")
     public ResponseEntity<List<UserDto>> getUserNotInClass(@PathVariable Integer classId,
                                                            @RequestParam(required = false) Integer limit,
                                                            @RequestParam(required = false) Integer offset){

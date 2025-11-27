@@ -26,12 +26,14 @@ public class SecurityConfig {
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final CustomOidcUserService customOidcUserService;
 
+    // application.properties / application.yml 側で設定可能にする
     @Value("${app.oauth2-registration-id:microsoft}")
     private String oauth2RegistrationId;
 
     @Value("${app.post-logout-redirect-uri:http://localhost:5173}")
     private String postLogoutRedirectUri;
 
+    //CORS 用オリジン（カンマ区切りで複数指定可能）
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String allowedOriginsProperty;
 
@@ -61,15 +63,16 @@ public class SecurityConfig {
                                 "/api/stamp-send",
                                 "/api/rooms/*/stamp-summary",
                                 "/api/stamp-management/**",
-                                "/api/rooms/*/stamp-activity",
                                 "/api/rooms/*/close",
                                 "/api/rooms/*/delete",
                                 "/static/**",
                                 "/favicon.ico",
-                                // ここを permitAll に追加: setup ページと API （初期化）
+                                "/api/rooms",
+                                "/api/rooms/**",
                                 "/setup",
                                 "/setup/**",
-                                "/api/setup/**"
+                                "/api/setup/**",
+                                "/api/classes/*/users"
                         ).permitAll()
 
                         // フロントの /users ページ（静的ページ）へのアクセスは ADMIN/TEACHER に許可
@@ -87,7 +90,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/oauth2/authorization/" + oauth2RegistrationId)
+                        // application 側の registration id と合わせてください
+                        .loginPage("/oauth2/authorization/microsoft")
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserService))
                         .defaultSuccessUrl("http://localhost:5173", true)
                         // 追加: 認証失敗時はフロントの /login-disabled へリダイレクトする
@@ -122,6 +126,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
+        // allowedOriginsProperty はカンマ区切りで複数オリジンを指定できます
         List<String> allowedOrigins = Arrays.stream(allowedOriginsProperty.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
@@ -129,6 +134,7 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
         config.setAllowCredentials(true);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With", "*"));

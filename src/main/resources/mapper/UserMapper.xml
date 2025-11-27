@@ -42,7 +42,7 @@
     </select>
 
     <!-- 未追加ユーザー一覧 -->
-    <select id="selectUsersNotClass" resultType="com.example.stampsysback.dto.UserDto" parameterType="map">
+    <select id="selectUsersNotInClass" resultType="com.example.stampsysback.dto.UserDto" parameterType="map">
             SELECT u.user_id AS userId,
     u.user_name AS userName,
     u.email AS email

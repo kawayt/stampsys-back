@@ -6,7 +6,7 @@
     <!-- users_classesに追加(uer_id,class_idのペア）-->
     <insert id="insertUserClass" parameterType="map">
         INSERT INTO users_classes (user_id, class_id)
-        VALUE (#{userId}, #{classId})
+        VALUES (#{userId}, #{classId})
     </insert>
 
     <!-- users_classesから削除(user_id,class_idのペア）-->
@@ -47,8 +47,8 @@
     <select id="selectRoomByUserId" parameterType="int" resultMap="RoomResult">
         SELECT r.room_id, r.room_name, r.class_id, r.active, r.created_at
         FROM rooms r
-        JOIN users_classes uc ON r.room_id = uc.room_id
-        WHERE uc.room_id = #{roomId}
+        JOIN users_classes uc ON r.class_id = uc.class_id
+        WHERE uc.user_id = #{userId}
         ORDER BY r.room_id
     </select>
 </mapper>
