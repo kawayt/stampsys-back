@@ -38,7 +38,7 @@ public class UserClassController {
 
         try{
             // ユーザーをクラスに追加
-            int rows = userClassService.addUserToClass(classId, userId);
+            int rows = userClassService.addUserToClass(userId, classId);
             if(rows == 1){
                 // 追加成功（一行更新）なら201 Created（status(HttpStatus.CREATED)）を返す
                 return ResponseEntity.status(HttpStatus.CREATED).body("added");
@@ -59,11 +59,11 @@ public class UserClassController {
     // 指定クラスからユーザーを削除する
     // DELETE/api/classes/{classId}/users/{userId}
     @DeleteMapping("/classes/{classId}/users/{userId}")
-    public ResponseEntity<?> removeUserFromClass(@PathVariable Integer classId,
-                                             @PathVariable Integer userId){
+    public ResponseEntity<?> removeUserFromClass(@PathVariable Integer userId,
+                                             @PathVariable Integer classId){
         try{
             // ユーザーをクラスから削除
-            int rows = userClassService.removeUserFromClass(classId, userId);
+            int rows = userClassService.removeUserFromClass(userId, classId);
             if(rows == 1){
                 // 削除成功（一行削除）なら204（成功したが、返すコンテンツはないという意味） No Contentを返す
                 return ResponseEntity.noContent().build();
