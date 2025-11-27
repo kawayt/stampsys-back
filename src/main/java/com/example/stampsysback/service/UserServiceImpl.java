@@ -11,11 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * シンプル実装。既存の変換ロジックがあればそれに合わせて修正してください。
+ * 実装クラス（@Service）。
+ * 既存のメソッドはそのままに、getUserCounts(String) を実装しています。
  */
 @Service
 public class UserServiceImpl implements UserService {
@@ -32,7 +33,7 @@ public class UserServiceImpl implements UserService {
         return listUsers(q, null);
     }
 
-    // 新: role を受け取る listUsers（配列レスポンス用）
+    // 既存の listUsers(q, role) 実装（省略しない形で入れてあります）
     public List<UserDto> listUsers(String q, String role) {
         List<User> users;
         if ((q == null || q.trim().isEmpty()) && (role == null || "ALL".equalsIgnoreCase(role))) {
@@ -44,7 +45,7 @@ public class UserServiceImpl implements UserService {
                     .filter(u -> {
                         if (role != null && !"ALL".equalsIgnoreCase(role)) {
                             if (u.getRole() == null) return false;
-                            if (!u.getRole().equalsIgnoreCase(role)) return false;
+                            return u.getRole().equalsIgnoreCase(role);
                         }
                         return true;
                     })
@@ -58,31 +59,22 @@ public class UserServiceImpl implements UserService {
         return users.stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    /**
-     * ページネーション対応のユーザー一覧取得
-     */
     @Override
     public Page<UserDto> listUsersPage(String q, int page, int size) {
-        // 既存の引数互換のため、role = null として呼ぶ
         return listUsersPage(q, null, page, size);
     }
 
-    // 新: role を考慮したページング実装
     @Override
     public Page<UserDto> listUsersPage(String q, String role, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by("userId").ascending());
 
         Page<User> pageResult;
 
-        // ロール指定があるかどうかでリポジトリメソッドを使い分け
         if ((q == null || q.trim().isEmpty()) && (role == null || "ALL".equalsIgnoreCase(role))) {
             pageResult = userRepository.findByHiddenFalse(pageable);
         } else if ((q == null || q.trim().isEmpty()) && role != null && !"ALL".equalsIgnoreCase(role)) {
-            // role 指定のみ：リポジトリに findByRoleAndHiddenFalse を追加して利用
             pageResult = userRepository.findByRoleAndHiddenFalse(role, pageable);
         } else {
-            // q がある場合：repository の searchVisible があればそれを使うのがベスト（ここではフォールバック実装）
-            // フォールバック: 全件検索 → フィルタ → page 化
             String keyword = q == null ? null : q.toLowerCase();
             List<User> filtered = userRepository.findAll().stream()
                     .filter(u -> !u.isHidden())
@@ -107,13 +99,9 @@ public class UserServiceImpl implements UserService {
         return pageResult.map(this::toDto);
     }
 
-    /**
-     * 追加: 非表示ユーザーのページ取得（管理者向け）
-     */
     @Override
     public Page<UserDto> listHiddenUsersPage(String q, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by("userId").ascending());
-        Page<User> pageResult;
         if (q == null || q.trim().isEmpty()) {
             List<User> hiddenAll = userRepository.findByHiddenTrue();
             int start = Math.min(hiddenAll.size(), page * size);
@@ -143,13 +131,9 @@ public class UserServiceImpl implements UserService {
 
         String prevRole = u.getRole();
         if (newRole != null && "ADMIN".equalsIgnoreCase(newRole)) {
-            // 現在表示対象（hidden=false）での管理者数を取得
             long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-            // 自分が既に ADMIN ならカウントから除外（＝ロール維持は許可）
             if (!(prevRole != null && prevRole.equalsIgnoreCase("ADMIN"))) {
-                // 新たに ADMIN を付与するケース
                 if (adminCount >= 2) {
-                    // 管理者が既に 2 人以上いるので追加不可
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             "管理者権限は最大２人を超えて付与することができません");
                 }
@@ -167,15 +151,10 @@ public class UserServiceImpl implements UserService {
         User u = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
 
-        // 復元（hidden=false）で、対象ユーザーの role が ADMIN の場合は
-        // 表示中の ADMIN 数をチェックして 2 人を超えないようにする
-        if (!hidden) { // false => 復元
+        if (!hidden) {
             String role = u.getRole();
             if (role != null && "ADMIN".equalsIgnoreCase(role)) {
                 long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-                // このユーザーが現在 hidden=true のため adminCount に含まれていないはずだが、
-                // 念のため自分がすでに表示中の ADMIN かどうかは prev hidden 状態で判断されるため
-                // ここでは単純に adminCount >= 2 を禁止条件とする。
                 if (adminCount >= 2) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             "管理者権限は最大２人を超えて付与することができません");
@@ -193,12 +172,11 @@ public class UserServiceImpl implements UserService {
         return getUserCounts(null);
     }
 
-    // 新: role 指定でカウントを返す（role=null or ALL は従来どおり全体を返す）
+    // ここでインターフェースの抽象メソッドをオーバーライドしている
     @Override
     public UserCountsDto getUserCounts(String role) {
         if (role != null && !"ALL".equalsIgnoreCase(role)) {
             long filtered = userRepository.countByRoleAndHiddenFalse(role);
-            // 他の role カウントは 0 にして total に filtered をセットする（フロント側は total を使う想定）
             UserCountsDto dto = new UserCountsDto();
             if ("ADMIN".equalsIgnoreCase(role)) dto.setAdmin((int) filtered);
             else if ("TEACHER".equalsIgnoreCase(role)) dto.setTeacher((int) filtered);
@@ -206,7 +184,6 @@ public class UserServiceImpl implements UserService {
             dto.setTotal((int) filtered);
             return dto;
         } else {
-            // 既存の実装: 全体の管理者/教員/学生/total を返す
             long admin = userRepository.countByRoleAndHiddenFalse("ADMIN");
             long teacher = userRepository.countByRoleAndHiddenFalse("TEACHER");
             long student = userRepository.countByRoleAndHiddenFalse("STUDENT");
@@ -229,5 +206,31 @@ public class UserServiceImpl implements UserService {
         d.setCreatedAt(u.getCreatedAt());
         d.setHidden(u.isHidden());
         return d;
+    }
+
+    @Override
+    public Map<Integer, String> getUserNamesByIds(Collection<Integer> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Integer> ids = userIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        final int BATCH_SIZE = 900;
+        Map<Integer, String> result = new HashMap<>(Math.min(ids.size(), 256));
+
+        for (int i = 0; i < ids.size(); i += BATCH_SIZE) {
+            int end = Math.min(i + BATCH_SIZE, ids.size());
+            List<Integer> chunk = ids.subList(i, end);
+            Iterable<User> found = userRepository.findAllById(chunk);
+            for (User u : found) {
+                if (u == null || u.getUserId() == null) continue;
+                result.putIfAbsent(u.getUserId(), u.getUserName() != null ? u.getUserName() : "");
+            }
+        }
+        return result;
     }
 }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stampsysback.mapper.StampLogMapper">
+
+    <resultMap id="StampLogDtoMap" type="com.example.stampsysback.dto.StampLogDto">
+        <id column="stamp_log_id" property="stampLogId"/>
+        <result column="room_id" property="roomId"/>
+        <result column="user_id" property="userId"/>
+        <result column="stamp_id" property="stampId"/>
+        <result column="sent_at" property="sentAt" jdbcType="TIMESTAMP"/>
+        <result column="sender_name" property="senderName"/>
+        <!-- 追加: スタンプ定義からのメタ情報 -->
+        <result column="stamp_name" property="stampName"/>
+        <result column="stamp_color" property="stampColor"/>
+        <result column="stamp_icon" property="stampIcon"/>
+    </resultMap>
+
+    <select id="findByRoomIdWithSender" resultMap="StampLogDtoMap" parameterType="map">
+        SELECT
+        sl.stamp_log_id,
+        sl.room_id,
+        sl.user_id,
+        sl.stamp_id,
+        sl.sent_at,
+        u.user_name AS sender_name,
+        s.stamp_name  AS stamp_name,
+        s.stamp_color AS stamp_color,
+        s.stamp_icon  AS stamp_icon
+        FROM stamp_logs sl
+        LEFT JOIN users u ON sl.user_id = u.user_id
+        /* stamps テーブルが存在する前提で LEFT JOIN */
+        LEFT JOIN stamps s ON sl.stamp_id = s.stamp_id
+        WHERE sl.room_id = #{roomId}
+        <if test="startTs != null">
+            AND sl.sent_at &gt;= #{startTs, jdbcType=TIMESTAMP}
+        </if>
+        <if test="endTs != null">
+            AND sl.sent_at &lt;= #{endTs, jdbcType=TIMESTAMP}
+        </if>
+        ORDER BY sl.sent_at ASC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+        <if test="offset != null">
+            OFFSET #{offset}
+        </if>
+        ;
+    </select>
+
+</mapper>
