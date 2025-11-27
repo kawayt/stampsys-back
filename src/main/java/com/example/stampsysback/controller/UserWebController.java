@@ -22,7 +22,6 @@ public class UserWebController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')") // ADMIN のみアクセス可能
     public String listUsers(Model model) {
         List<User> users = userRepository.findAll();
         model.addAttribute("users", users);
