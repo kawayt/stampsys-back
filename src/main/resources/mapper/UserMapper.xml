@@ -32,6 +32,7 @@
         FROM users u
         JOIN users_classes uc ON u.user_id = uc.user_id
         WHERE uc.class_id = #{classId}
+        AND u.role = 'STUDENT'
         ORDER BY u.user_name
         <if test = "limit != null">
             LIMIT #{limit}
@@ -52,6 +53,7 @@
     WHERE NOT EXISTS (
         SELECT 1 FROM users_classes uc WHERE uc.user_id = u.user_id AND uc.class_id = #{classId}
     )
+    AND u.role = 'STUDENT'
     ORDER BY u.user_name
     <if test="limit != null">
         LIMIT #{limit}
