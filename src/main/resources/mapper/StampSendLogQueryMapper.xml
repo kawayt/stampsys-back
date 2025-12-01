@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.stampsysback.mapper.StampSendLogQueryMapper">
+
+    <resultMap id="StampSendLogResult" type="com.example.stampsysback.dto.StampSendLogDto">
+        <result property="stampId" column="stamp_id"/>
+        <result property="stampName" column="stamp_name"/>
+        <result property="stampColor" column="stamp_color"/>
+        <result property="stampIcon" column="stamp_icon"/>
+        <result property="sentAt" column="sent_at"/>
+    </resultMap>
+
+    <select id="findByUserIdAndRoomId" resultMap="StampSendLogResult" parameterType="map">
+        SELECT s.stamp_id, s.stamp_name, s.stamp_color, s.stamp_icon, l.sent_at
+        FROM stamp_logs l
+                 JOIN stamps s ON l.stamp_id = s.stamp_id
+        WHERE l.user_id = #{userId} AND l.room_id = #{roomId}
+        ORDER BY l.sent_at DESC
+    </select>
+
+</mapper>
