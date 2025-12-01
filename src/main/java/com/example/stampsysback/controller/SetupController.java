@@ -102,6 +102,7 @@ public class SetupController {
                 // Ensure sequences exist
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS users_user_id_seq");
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS stamp_logs_stamp_log_id_seq");
+                stmt.execute("CREATE SEQUENCE IF NOT EXISTS notes_note_id_seq");
 
                 // Ensure critical columns exist (ALTER TABLE ADD COLUMN IF NOT EXISTS)
                 stmt.execute("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS hidden boolean NOT NULL DEFAULT false");
@@ -140,6 +141,7 @@ public class SetupController {
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON public.users (email ASC)");
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_provider_user_id ON public.users (provider_user_id ASC)");
                 stmt.execute("CREATE TABLE IF NOT EXISTS public.users_classes ( user_id integer NOT NULL, class_id integer NOT NULL, CONSTRAINT users_classes_pkey PRIMARY KEY (class_id, user_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.notes ( note_id integer NOT NULL DEFAULT nextval('notes_note_id_seq'::regclass), note_text character varying COLLATE pg_catalog.\"default\" NOT NULL, room_id integer NOT NULL, hidden boolean NOT NULL DEFAULT false, created_at timestamp with time zone NOT NULL DEFAULT now(), CONSTRAINT notes_pkey PRIMARY KEY (note_id) )");
 
                 // Triggers
                 stmt.execute("DROP TRIGGER IF EXISTS trg_enforce_max_admins ON public.users");

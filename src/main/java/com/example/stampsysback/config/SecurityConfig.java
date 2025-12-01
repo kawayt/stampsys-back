@@ -86,6 +86,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/hidden", "/api/users/hidden/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/users/*/role").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/users/*/hidden").hasRole("ADMIN")
+                        // ★ 追加: DB管理API は ADMIN のみ
+                        .requestMatchers("/api/admin/db/**").hasRole("ADMIN")
+
 
                         // それ以外は認証要求
                         .anyRequest().authenticated()
