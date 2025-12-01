@@ -2,6 +2,7 @@ package com.example.stampsysback.controller;
 
 import com.example.stampsysback.dto.NoteRequest;
 import com.example.stampsysback.dto.NoteResponse;
+import com.example.stampsysback.dto.NoteCount;
 import com.example.stampsysback.service.NoteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -32,5 +33,11 @@ public class NoteController {
     public NoteResponse setHidden(@PathVariable Integer noteId,
                                   @RequestParam boolean hidden) {
         return noteService.setHidden(noteId, hidden);
+    }
+
+    // クラス内のルームごとのメモ数を一括返却
+    @GetMapping("/classes/{classId}/rooms/note-counts")
+    public List<NoteCount> getNoteCountsByClass(@PathVariable Integer classId) {
+        return noteService.getNoteCountsByClass(classId);
     }
 }

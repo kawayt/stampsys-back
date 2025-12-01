@@ -45,4 +45,16 @@
         WHERE note_id = #{noteId}
     </update>
 
+    <!-- 追加: 指定クラス(class_id) に紐づく各ルームごとのメモ数（hidden = false をカウント） -->
+    <select id="selectNoteCountsByClass" parameterType="int" resultType="com.example.stampsysback.dto.NoteCount">
+        SELECT
+            r.room_id AS roomId,
+            COALESCE(COUNT(n.note_id), 0) AS noteCount
+        FROM rooms r
+                 LEFT JOIN notes n
+                           ON r.room_id = n.room_id AND n.hidden = false
+        WHERE r.class_id = #{classId}
+        GROUP BY r.room_id
+    </select>
+
 </mapper>

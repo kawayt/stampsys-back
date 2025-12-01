@@ -2,6 +2,7 @@ package com.example.stampsysback.service;
 
 import com.example.stampsysback.dto.NoteRequest;
 import com.example.stampsysback.dto.NoteResponse;
+import com.example.stampsysback.dto.NoteCount;
 import com.example.stampsysback.mapper.NoteMapper;
 import com.example.stampsysback.model.Note;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,10 @@ public class NoteService {
         }
         Note n = noteMapper.selectById(noteId);
         return toDto(n);
+    }
+
+    public List<NoteCount> getNoteCountsByClass(Integer classId){
+        return noteMapper.selectNoteCountsByClass(classId);
     }
 
     private NoteResponse toDto(Note n) {

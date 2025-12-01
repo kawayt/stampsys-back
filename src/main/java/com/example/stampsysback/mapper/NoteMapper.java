@@ -1,5 +1,6 @@
 package com.example.stampsysback.mapper;
 
+import com.example.stampsysback.dto.NoteCount;
 import com.example.stampsysback.model.Note;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -22,4 +23,7 @@ public interface NoteMapper {
 
     // update hidden flag
     int updateHidden(@Param("noteId") Integer noteId, @Param("hidden") boolean hidden);
+
+    // クラス内のルームごとのメモ数を取得
+    List<NoteCount> selectNoteCountsByClass(Integer classId);
 }
