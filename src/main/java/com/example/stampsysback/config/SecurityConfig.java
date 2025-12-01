@@ -72,7 +72,8 @@ public class SecurityConfig {
                                 "/setup",
                                 "/setup/**",
                                 "/api/setup/**",
-                                "/api/classes/*/users"
+                                "/api/classes/*/users",
+                                "/api/users/*/classes"
                         ).permitAll()
 
                         // フロントの /users ページ（静的ページ）へのアクセスは ADMIN/TEACHER に許可
