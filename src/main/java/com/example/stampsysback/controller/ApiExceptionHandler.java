@@ -1,10 +1,13 @@
 package com.example.stampsysback.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -13,6 +16,15 @@ import java.util.Map;
  */
 @ControllerAdvice
 public class ApiExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    // 追加: ResponseStatusException を優先的に処理する（サービス層で throw したメッセージを保持）
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException ex) {
+        String message = ex.getReason() != null ? ex.getReason() : ex.getMessage();
+        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message", message));
+    }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
@@ -31,6 +43,18 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
+        // 内部エラーは詳細を返さずログに残す
+        logger.error("Unhandled exception: {}", ex.getMessage(), ex);
+        // まず cause チェーンをたどって ResponseStatusException があればそれを使う
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof ResponseStatusException rse) {
+                String message = rse.getReason() != null ? rse.getReason() : rse.getMessage();
+                return ResponseEntity.status(rse.getStatusCode()).body(Map.of("message", message));
+            }
+            cause = cause.getCause();
+        }
+
         // ログはサーバ側で記録してください（ここでは簡潔に処理）
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "管理者権限は最大２人を超えて付与することができません"));
     }

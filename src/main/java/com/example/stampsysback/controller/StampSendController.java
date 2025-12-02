@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 //POSTリクエストを受け取り、StampSendServiceを呼び出すコントローラー
 @RestController
@@ -29,7 +30,7 @@ public class StampSendController {
 
         try {
             StampSendRecord stampSendRecord = stampSendService.saveStamp(
-                    stampSendRequest.getUserId(), 
+                    stampSendRequest.getUserId(),
                     stampSendRequest
             );
 
@@ -45,17 +46,20 @@ public class StampSendController {
                 return ResponseEntity.ok(stampSendResponse);
             } else {
                 logger.warn("stampSave returned null for userId={}", stampSendRequest.getUserId());
-                
+
                 StampSendResponse stampSendResponse = new StampSendResponse();
                 stampSendResponse.setSuccess(false);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(stampSendResponse);
             }
+        } catch (ResponseStatusException rse) {
+            // Service 層で投げた ResponseStatusException は再スローしてグローバルハンドラに任せる
+            throw rse;
         } catch (Exception e) {
-            logger.error("Failed to save stamp for userId={}: {}", 
-                    stampSendRequest.getUserId(), 
-                    e.getMessage(), 
+            logger.error("Failed to save stamp for userId={}: {}",
+                    stampSendRequest.getUserId(),
+                    e.getMessage(),
                     e);
-            
+
             StampSendResponse stampSendResponse = new StampSendResponse();
             stampSendResponse.setSuccess(false);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(stampSendResponse);
