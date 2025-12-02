@@ -132,7 +132,7 @@ public class SetupController {
                 }
 
                 // Create tables if not exists
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.classes ( class_id integer NOT NULL, class_name varchar(255) NOT NULL, created_at timestamptz NOT NULL, CONSTRAINT classes_pkey PRIMARY KEY (class_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.classes ( class_id integer NOT NULL, class_name varchar(255) NOT NULL, created_at timestamptz NOT NULL, deleted_at timestamptz, CONSTRAINT classes_pkey PRIMARY KEY (class_id) )");
                 stmt.execute("CREATE TABLE IF NOT EXISTS public.rooms ( room_id integer NOT NULL, room_name varchar(255) NOT NULL, class_id integer NOT NULL, active boolean NOT NULL, created_at timestamptz NOT NULL, hidden boolean NOT NULL DEFAULT false, CONSTRAINT rooms_pkey PRIMARY KEY (room_id) )");
                 stmt.execute("CREATE TABLE IF NOT EXISTS public.stamp_logs ( user_id integer NOT NULL, room_id integer NOT NULL, stamp_id integer NOT NULL, sent_at timestamptz NOT NULL DEFAULT now(), stamp_log_id integer NOT NULL DEFAULT nextval('stamp_logs_stamp_log_id_seq'::regclass), CONSTRAINT stamp_logs_pkey PRIMARY KEY (stamp_log_id) )");
                 stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps ( stamp_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass), stamp_name varchar(255) NOT NULL, stamp_color integer NOT NULL, stamp_icon integer NOT NULL, stamp_deleted boolean NOT NULL DEFAULT false, CONSTRAINT stamps_pkey PRIMARY KEY (stamp_id) )");

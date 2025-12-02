@@ -2,7 +2,6 @@ package com.example.stampsysback.controller;
 
 import com.example.stampsysback.model.User;
 import com.example.stampsysback.repository.UserRepository;
-import com.example.stampsysback.service.AdminAuditLogService;
 import com.example.stampsysback.service.DatabaseSetupService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.dao.DataAccessException;
@@ -16,11 +15,10 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * AdminDbController（改良版）
+ * AdminDbController（最終修正版）
  *
- * - テーブル名/カラム名のバリデーション
- * - PK列のデータ型を調べて、id を適切な Java 型にパースしてから JDBC に渡す
- * - 主要な例外ハンドリングと依存チェック（users 等）を導入
+ * - deleted_at の更新を許可（論理削除の復元対応）
+ * - AdminAuditLogService (監査ログ) の依存を削除
  */
 @RestController
 @RequestMapping("/api/admin/db")
@@ -28,22 +26,19 @@ public class AdminDbController {
 
     private final JdbcTemplate jdbcTemplate;
     private final DatabaseSetupService databaseSetupService;
-    private final AdminAuditLogService auditLogService;
     private final UserRepository userRepository;
-    private final ObjectMapper objectMapper;
+    // private final ObjectMapper objectMapper; // JSON変換を使わなくなったので不要なら削除可能ですが、念のため残しています
 
     private static final Pattern IDENTIFIER = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
 
     public AdminDbController(JdbcTemplate jdbcTemplate,
                              DatabaseSetupService databaseSetupService,
-                             AdminAuditLogService auditLogService,
                              UserRepository userRepository,
                              ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.databaseSetupService = databaseSetupService;
-        this.auditLogService = auditLogService;
         this.userRepository = userRepository;
-        this.objectMapper = objectMapper;
+        // this.objectMapper = objectMapper;
     }
 
     private void validateIdentifier(String name) {
@@ -159,20 +154,7 @@ public class AdminDbController {
         String dataSql = "SELECT * FROM public." + tableName + " ORDER BY 1 LIMIT ? OFFSET ?";
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(dataSql, limit, offset);
 
-        try {
-            User admin = resolveCurrentUser(authentication);
-            auditLogService.log(
-                    admin.getUserId(),
-                    admin.getEmail(),
-                    tableName,
-                    "SELECT",
-                    null,
-                    null,
-                    null
-            );
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // 監査ログ呼び出し削除済み
 
         Map<String, Object> result = new HashMap<>();
         result.put("rows", rows);
@@ -198,28 +180,15 @@ public class AdminDbController {
         return jdbcTemplate.queryForList(pkSql, String.class, tableName);
     }
 
-    /**
-     * 指定テーブルの指定カラムの data_type を返す（information_schema.columns.data_type）
-     */
     private String getColumnDataType(String tableName, String columnName) {
         String sql = "SELECT data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ? AND column_name = ?";
         List<String> types = jdbcTemplate.queryForList(sql, String.class, tableName, columnName);
         return types.isEmpty() ? null : types.get(0);
     }
 
-    /**
-     * 主キー文字列 (path variable) を適切な Java オブジェクトに変換して返す。
-     * - integer -> Integer
-     * - bigint -> Long
-     * - character varying / text -> String
-     * - その他: String を返す
-     *
-     * 変換できない場合は IllegalArgumentException を投げる。
-     */
     private Object parseIdValue(String tableName, String pkColumn, String idStr) {
         String dataType = getColumnDataType(tableName, pkColumn);
         if (dataType == null) {
-            // 型が取れない場合は文字列のまま渡す（フォールバック）
             return idStr;
         }
         dataType = dataType.toLowerCase(Locale.ROOT);
@@ -229,10 +198,8 @@ public class AdminDbController {
             } else if (dataType.contains("bigint") || dataType.contains("big serial")) {
                 return Long.valueOf(idStr);
             } else if (dataType.contains("numeric") || dataType.contains("decimal")) {
-                // 必要なら BigDecimal に変更可能
                 return new java.math.BigDecimal(idStr);
             } else {
-                // text, character varying, uuid, etc.
                 return idStr;
             }
         } catch (NumberFormatException nfe) {
@@ -266,12 +233,8 @@ public class AdminDbController {
 
         for (Map.Entry<String, Object> entry : body.entrySet()) {
             String colName = entry.getKey();
-            if (!IDENTIFIER.matcher(colName).matches()) {
-                continue;
-            }
-            if (!validColumns.contains(colName)) {
-                continue;
-            }
+            if (!IDENTIFIER.matcher(colName).matches()) continue;
+            if (!validColumns.contains(colName)) continue;
             columns.add(colName);
             values.add(entry.getValue());
         }
@@ -292,25 +255,10 @@ public class AdminDbController {
 
         jdbcTemplate.update(sql, values.toArray());
 
-        try {
-            User admin = resolveCurrentUser(authentication);
-            String afterJson = objectMapper.writeValueAsString(body);
-            auditLogService.log(
-                    admin.getUserId(),
-                    admin.getEmail(),
-                    tableName,
-                    "INSERT",
-                    null,
-                    null,
-                    afterJson
-            );
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // 監査ログ呼び出し削除済み
 
         return ResponseEntity.ok(Map.of("message", "1件挿入しました"));
     }
-// （ファイル全体は既にある前提。ここでは updateRow メソッド周辺の変更を示します）
 
     @PutMapping("/tables/{tableName}/rows/{id}")
     public ResponseEntity<?> updateRow(@PathVariable("tableName") String tableName,
@@ -336,14 +284,10 @@ public class AdminDbController {
         }
         String pkColumn = pkColumns.get(0);
 
-        // 主キーの値を適切にパース
         Object idParam = parseIdValue(tableName, pkColumn, id);
-
         String selectSql = "SELECT * FROM public." + tableName + " WHERE " + pkColumn + " = ?";
-        List<Map<String, Object>> beforeList = jdbcTemplate.queryForList(selectSql, idParam);
-        Map<String, Object> beforeRow = beforeList.isEmpty() ? null : beforeList.get(0);
 
-        // カラム一覧と型情報を取得する
+        // カラム一覧と型情報を取得
         String colInfoSql = "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ?";
         List<Map<String, Object>> colInfoList = jdbcTemplate.queryForList(colInfoSql, tableName);
         Set<String> validColumns = new HashSet<>();
@@ -355,7 +299,7 @@ public class AdminDbController {
             colTypeMap.put(colName, dataType == null ? "" : dataType.toLowerCase(Locale.ROOT));
         }
 
-        // 更新不許可の型一覧（timestamp / timestamptz / date など）
+        // 更新不許可の型一覧（deleted_at は除外するため、ここでは基本的な時間型だけリストアップ）
         Set<String> forbiddenTypeSubstrings = Set.of("timestamp", "time", "date");
 
         List<String> setClauses = new ArrayList<>();
@@ -363,12 +307,10 @@ public class AdminDbController {
 
         for (Map.Entry<String, Object> entry : body.entrySet()) {
             String colName = entry.getKey();
-            // 名前チェック、存在チェック、PK除外
             if (!IDENTIFIER.matcher(colName).matches()) continue;
             if (!validColumns.contains(colName)) continue;
             if (colName.equals(pkColumn)) continue;
 
-            // 型を見て更新不可ならスキップ
             String dtype = colTypeMap.getOrDefault(colName, "");
             boolean isForbidden = false;
             for (String sub : forbiddenTypeSubstrings) {
@@ -377,8 +319,9 @@ public class AdminDbController {
                     break;
                 }
             }
-            if (isForbidden) {
-                // 念のためログ出力してスキップ
+
+            // 【重要】deleted_at は許可、それ以外の日時型はスキップ
+            if (isForbidden && !colName.equals("deleted_at")) {
                 System.out.println("Skipping update of column (type restricted): " + colName + " (" + dtype + ")");
                 continue;
             }
@@ -402,18 +345,7 @@ public class AdminDbController {
             return ResponseEntity.badRequest().body(Map.of("message", "対象行が見つからないか、更新されませんでした"));
         }
 
-        List<Map<String, Object>> afterList = jdbcTemplate.queryForList(selectSql, idParam);
-        Map<String, Object> afterRow = afterList.isEmpty() ? null : afterList.get(0);
-
-        try {
-            User admin = resolveCurrentUser(authentication);
-            String beforeJson = beforeRow == null ? null : objectMapper.writeValueAsString(beforeRow);
-            String afterJson = afterRow == null ? null : objectMapper.writeValueAsString(afterRow);
-            String pkInfo = pkColumn + "=" + id;
-            auditLogService.log(admin.getUserId(), admin.getEmail(), tableName, "UPDATE", pkInfo, beforeJson, afterJson);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // 監査ログ呼び出し削除済み
 
         return ResponseEntity.ok(Map.of("message", "1件更新しました"));
     }
@@ -440,23 +372,13 @@ public class AdminDbController {
 
         Object idParam = parseIdValue(tableName, pkColumn, id);
 
-        // users テーブル向けの参照チェック（例）
         if ("users".equals(tableName)) {
             int stampLogs = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM public.stamp_logs WHERE user_id = ?", Integer.class, idParam);
             int usersClasses = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM public.users_classes WHERE user_id = ?", Integer.class, idParam);
             if (stampLogs > 0 || usersClasses > 0) {
-                StringBuilder sb = new StringBuilder();
-                sb.append("このユーザーは他のデータに参照されています。");
-                if (stampLogs > 0) sb.append(" stamp_logs:").append(stampLogs).append("件");
-                if (usersClasses > 0) sb.append(" users_classes:").append(usersClasses).append("件");
-                sb.append("。先に関連データを削除または参照を解除してください。");
-                return ResponseEntity.status(409).body(Map.of("message", sb.toString()));
+                return ResponseEntity.status(409).body(Map.of("message", "関連データが存在するため削除できません。"));
             }
         }
-
-        String selectSql = "SELECT * FROM public." + tableName + " WHERE " + pkColumn + " = ?";
-        List<Map<String, Object>> beforeList = jdbcTemplate.queryForList(selectSql, idParam);
-        Map<String, Object> beforeRow = beforeList.isEmpty() ? null : beforeList.get(0);
 
         String deleteSql = "DELETE FROM public." + tableName + " WHERE " + pkColumn + " = ?";
         int deleted = jdbcTemplate.update(deleteSql, idParam);
@@ -464,23 +386,7 @@ public class AdminDbController {
             return ResponseEntity.badRequest().body(Map.of("message", "対象行が見つからないか、削除されませんでした"));
         }
 
-        try {
-            User admin = resolveCurrentUser(authentication);
-            String beforeJson = beforeRow == null ? null : objectMapper.writeValueAsString(beforeRow);
-            String pkInfo = pkColumn + "=" + id;
-
-            auditLogService.log(
-                    admin.getUserId(),
-                    admin.getEmail(),
-                    tableName,
-                    "DELETE",
-                    pkInfo,
-                    beforeJson,
-                    null
-            );
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // 監査ログ呼び出し削除済み
 
         return ResponseEntity.ok(Map.of("message", "1件削除しました"));
     }
