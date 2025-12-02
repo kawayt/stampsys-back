@@ -5,12 +5,10 @@
 <mapper namespace="com.example.stampsysback.mapper.StampSummaryMapper">
 
     <!--
-      仕様：
-      - participants: rooms -> classes -> users_classes から取得するクラスのメンバー（参加者）
-      - latest_per_user: 各 user のその room における最新押下（ROW_NUMBER を使用）
-      - joined: participants LEFT JOIN latest_per_user により、未押下ユーザは stamp_id = NULL になる
-      - total: 参加者総数を分母にして割合を算出（未押下含む）
-      - 出力：stampId, stampName, cnt, pct
+      目的：
+      - ルームに紐づくスタンプ一覧（stamps JOIN stamps_classes JOIN rooms を基準）を全て出力する
+      - 参加者の「最新押下」を基に各スタンプの件数を集計（未押下は cnt=0 のまま出す）
+      - 参加者の最新が NULL（未押下）な人数を NO_STAMP 行として出力
     -->
 
     <select id="findLatestStampDistributionByRoomId" resultType="com.example.stampsysback.dto.StampSummary">
@@ -42,18 +40,47 @@
              ),
              total AS (
                  SELECT COUNT(*) AS total_cnt FROM participants
+             ),
+             cnts AS (
+                 -- latest が NULL (未押下) の行は除外して各 stamp_id ごとの件数を取る
+                 SELECT j.stamp_id, COUNT(*) AS cnt
+                 FROM joined j
+                 WHERE j.stamp_id IS NOT NULL
+                 GROUP BY j.stamp_id
+             ),
+             room_stamps AS (
+                 -- ルームに紐づくスタンプ一覧（あなたの stamps 取得経路を利用）
+                 SELECT s.stamp_id, s.stamp_name, s.stamp_color, s.stamp_icon
+                 FROM stamps s
+                          JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
+                          JOIN rooms r ON sc.class_id = r.class_id
+                 WHERE r.room_id = #{roomId}
              )
+
+        -- 1) ルームの全スタンプ（押されていないものは cnt=0）
         SELECT
-            COALESCE(s.stamp_id, -1) AS stampId,
-            COALESCE(s.stamp_name, 'NO_STAMP') AS stampName,
+            s.stamp_id AS stampId,
+            s.stamp_name AS stampName,
             s.stamp_color AS stampColor,
             s.stamp_icon AS stampIcon,
-            COUNT(*) AS cnt,
-            ROUND( (COUNT(*)::numeric / GREATEST(total.total_cnt,1)::numeric) * 100.0, 2) AS pct
-        FROM joined j
-                 LEFT JOIN stamps s ON j.stamp_id = s.stamp_id
+            COALESCE(c.cnt, 0)::integer AS cnt,
+            ROUND((COALESCE(c.cnt, 0)::numeric / GREATEST(total.total_cnt, 1)::numeric) * 100.0, 2) AS pct
+        FROM room_stamps s
+                 LEFT JOIN cnts c ON s.stamp_id = c.stamp_id
                  CROSS JOIN total
-        GROUP BY COALESCE(s.stamp_id, -1), COALESCE(s.stamp_name, 'NO_STAMP'), s.stamp_color, s.stamp_icon, total.total_cnt
+
+        UNION ALL
+
+        -- 2) 未押下（NO_STAMP）行：latest_per_user が NULL の人数
+        SELECT
+            -1 AS stampId,
+            'NO_STAMP' AS stampName,
+            NULL AS stampColor,
+            NULL AS stampIcon,
+            (SELECT COUNT(*) FROM joined j2 WHERE j2.stamp_id IS NULL)::integer AS cnt,
+            ROUND(((SELECT COUNT(*) FROM joined j2 WHERE j2.stamp_id IS NULL)::numeric / GREATEST(total.total_cnt, 1)::numeric) * 100.0, 2) AS pct
+        FROM total
+
         ORDER BY cnt DESC
         ;
     </select>
