@@ -22,13 +22,26 @@
         SELECT 1 FROM classes WHERE class_id = #{classId} LIMIT 1;
     </select>
 
-    <!-- 【追加】論理削除 -->
+    <!-- classId で 1 件取得 -->
+    <select id="selectById" parameterType="int"
+            resultType="com.example.stampsysback.entity.ClassEntity">
+        SELECT
+            class_id   AS classId,
+            class_name AS className,
+            created_at AS createdAt,
+            deleted_at AS deletedAt
+        FROM classes
+        WHERE class_id = #{classId}
+          AND deleted_at IS NULL
+    </select>
+
+    <!-- 論理削除 -->
     <update id="softDelete">
         UPDATE classes
         SET deleted_at = #{deletedAt}
         WHERE class_id = #{classId};
     </update>
-    <!-- 【追加】復元機能 -->
+    <!-- 復元機能 -->
     <update id="restore">
         UPDATE classes
         SET deleted_at = NULL

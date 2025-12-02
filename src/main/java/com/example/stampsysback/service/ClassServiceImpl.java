@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 // クラスサービス実装クラス
 @Service
 @Transactional
@@ -30,12 +29,19 @@ public class ClassServiceImpl implements ClassService{
         // return classEntity;
     }
 
-    // 【追加】論理削除: deleted_at に現在時刻を設定
+    // classId で 1 件取得
+    @Override
+    public ClassEntity selectClassById(Integer classId) {
+        return classMapper.selectById(classId);
+    }
+
+    // 論理削除: deleted_at に現在時刻を設定
     @Override
     public void deleteClass(Integer classId) {
         classMapper.softDelete(classId, OffsetDateTime.now());
     }
-    // 【追加】復元: deleted_at を NULL に設定
+
+    // 復元: deleted_at を NULL に設定
     @Override
     public void restoreClass(Integer classId) {
         classMapper.restore(classId);
