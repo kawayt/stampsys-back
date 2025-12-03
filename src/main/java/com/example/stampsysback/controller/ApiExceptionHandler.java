@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * API 例外ハンドラ: 例外をわかりやすい HTTP ステータス + JSON メッセージで返す
@@ -44,7 +45,9 @@ public class ApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
         // 内部エラーは詳細を返さずログに残す
-        logger.error("Unhandled exception: {}", ex.getMessage(), ex);
+        String errorId = UUID.randomUUID().toString();
+        logger.error("Unhandled exception (errorId={}): {}", errorId, ex.getMessage(), ex);
+
         // まず cause チェーンをたどって ResponseStatusException があればそれを使う
         Throwable cause = ex;
         while (cause != null) {
@@ -53,9 +56,13 @@ public class ApiExceptionHandler {
                 return ResponseEntity.status(rse.getStatusCode()).body(Map.of("message", message));
             }
             cause = cause.getCause();
-        }
 
-        // ログはサーバ側で記録してください（ここでは簡潔に処理）
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "管理者権限は最大２人を超えて付与することができません"));
+        }
+        // クライアントには汎用的なメッセージとエラーIDのみ返す（詳細はサーバログで確認）
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                        "message", "サーバー側で予期しないエラーが発生しました。運用担当にお問い合わせください。",
+                        "errorId", errorId
+                ));
     }
 }
