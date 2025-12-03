@@ -3,12 +3,8 @@ package com.example.stampsysback.service;
 import com.example.stampsysback.dto.StampSendRequest;
 import com.example.stampsysback.entity.RoomEntity;
 import com.example.stampsysback.entity.StampSendRecord;
-import com.example.stampsysback.event.StampSavedEvent;
 import com.example.stampsysback.mapper.RoomMapper;
 import com.example.stampsysback.mapper.StampSendRecordMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,18 +15,12 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class StampSendServiceImpl implements StampSendService {
 
-    private static final Logger logger = LoggerFactory.getLogger(StampSendServiceImpl.class);
-
     private final StampSendRecordMapper stampSendRecordMapper;
     private final RoomMapper roomMapper;
-    private final ApplicationEventPublisher eventPublisher;
 
-    public StampSendServiceImpl(StampSendRecordMapper stampSendRecordMapper,
-                                RoomMapper roomMapper,
-                                ApplicationEventPublisher eventPublisher) {
+    public StampSendServiceImpl(StampSendRecordMapper stampSendRecordMapper, RoomMapper roomMapper) {
         this.stampSendRecordMapper = stampSendRecordMapper;
         this.roomMapper = roomMapper;
-        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -53,18 +43,7 @@ public class StampSendServiceImpl implements StampSendService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "このルームは既に閉じています");
         }
 
-        // 保存
         stampSendRecordMapper.insertStampSendRecord(record);
-
-        // 保存成功後にイベントを発行（リスナー側で AFTER_COMMIT を使ってコミット完了後に通知する設計）
-        try {
-            // プリミティブ int -> long に暗黙変換され、StampSavedEvent のコンストラクタは long を受けるため
-            eventPublisher.publishEvent(new StampSavedEvent(this, record.getRoomId()));
-        } catch (Exception ex) {
-            // 通知失敗で本処理を失敗させたくないのでログのみ
-            logger.warn("Failed to publish StampSavedEvent for room {}", record.getRoomId(), ex);
-        }
-
         return record;
     }
 }
