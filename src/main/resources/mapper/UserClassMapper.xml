@@ -31,7 +31,7 @@
         FROM classes c
         <!-- 結合 -->
         JOIN users_classes uc ON c.class_id = uc.class_id
-        WHERE uc.user_id = #{userId}
+        WHERE uc.user_id = #{userId} AND c.deleted_at IS NULL
         ORDER BY c.class_id
     </select>
 
