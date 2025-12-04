@@ -30,6 +30,9 @@ public interface UserService {
     // 追加: role を考慮した counts 取得
     UserCountsDto getUserCounts(String role);
 
+    UserDto updateGroup(Integer userId, Integer groupId);
+
+    Page<UserDto> listUsersPage(String q, String role, Integer groupId, int page, int size);
     /**
      * 指定された userId の集合に対して display name を取得して返す。
      * 実装は DB へのバッチクエリ、キャッシュ、または外部ユーザサービス呼び出しのいずれかとする。

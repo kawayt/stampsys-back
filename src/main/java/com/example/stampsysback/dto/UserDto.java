@@ -9,18 +9,22 @@ public class UserDto {
     private String role;
     private OffsetDateTime createdAt;
 
-    // ★ 追加: 非表示フラグ
+    // 非表示フラグ
     private boolean hidden;
+
+    // groupId を含める（フロントが group 名を引けるようにする）
+    private Integer groupId;
 
     public UserDto() {}
 
-    public UserDto(Integer userId, String userName, String email, String role, OffsetDateTime createdAt, boolean hidden) {
+    public UserDto(Integer userId, String userName, String email, String role, OffsetDateTime createdAt, boolean hidden, Integer groupId) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.role = role;
         this.createdAt = createdAt;
         this.hidden = hidden;
+        this.groupId = groupId;
     }
 
     public Integer getUserId() { return userId; }
@@ -34,10 +38,9 @@ public class UserDto {
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 
-    public boolean isHidden() {
-        return hidden;
-    }
-    public void setHidden(boolean hidden) {
-        this.hidden = hidden;
-    }
+    public boolean isHidden() { return hidden; }
+    public void setHidden(boolean hidden) { this.hidden = hidden; }
+
+    public Integer getGroupId() { return groupId; }
+    public void setGroupId(Integer groupId) { this.groupId = groupId; }
 }

@@ -36,6 +36,10 @@ public class User {
     @Column(name = "hidden", nullable = false)
     private boolean hidden;
 
+    // ★ 追加: group_id カラム（名古屋 / 津 等を示す外部キー）
+    @Column(name = "group_id", nullable = true)
+    private Integer groupId;
+
     public User() {}
 
     public Integer getUserId() {
@@ -81,5 +85,13 @@ public class User {
     }
     public void setHidden(boolean hidden) {
         this.hidden = hidden;
+    }
+
+    // ★ groupId getter/setter
+    public Integer getGroupId() {
+        return groupId;
+    }
+    public void setGroupId(Integer groupId) {
+        this.groupId = groupId;
     }
 }
