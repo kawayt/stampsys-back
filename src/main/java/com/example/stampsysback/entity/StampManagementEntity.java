@@ -33,8 +33,8 @@ public class StampManagementEntity {
     @Column(name = "stamp_color")
     private Integer stampColor;
 
-    @Column(name = "stamp_deleted")
-    private Boolean stampDeleted; // 論理削除
+    @Column(name = "hidden")
+    private Boolean hidden; // 論理削除
 
     // 以下は集計や参照で便利なフィールド（DB にカラムがあればマッピングしておく）
     @Column(name = "class_id")

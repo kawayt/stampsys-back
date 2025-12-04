@@ -8,14 +8,13 @@
     <!-- スタンプ一覧取得 -->
     <select id="findAll" resultType="com.example.stampsysback.dto.StampManagementResponse">
         SELECT
-        stamp_id    AS stampId,
-        stamp_name  AS stampName,
-        stamp_icon  AS stampIcon,
-        stamp_color AS stampColor,
-        FALSE AS assigned
+            stamp_id    AS stampId,
+            stamp_name  AS stampName,
+            stamp_icon  AS stampIcon,
+            stamp_color AS stampColor,
+            FALSE AS assigned
         FROM stamps
-        WHERE stamp_deleted = FALSE
-        ORDER BY stamp_id;
+        WHERE hidden = FALSE  ORDER BY stamp_id;
     </select>
 
     <!-- 追加: 指定クラスに紐づく（assigned）スタンプ一覧 -->
@@ -29,8 +28,7 @@
         FROM stamps s
                  INNER JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
         WHERE sc.class_id = #{classId}
-          AND s.stamp_deleted = FALSE
-        ORDER BY s.stamp_id
+          AND s.hidden = FALSE  ORDER BY s.stamp_id
     </select>
 
     <!-- 追加: 指定クラスに紐づいていない（unassigned）スタンプ一覧 -->
@@ -42,8 +40,7 @@
             s.stamp_color AS stampColor,
             FALSE         AS assigned
         FROM stamps s
-        WHERE s.stamp_deleted = FALSE
-          AND NOT EXISTS (
+        WHERE s.hidden = FALSE  AND NOT EXISTS (
             SELECT 1 FROM stamps_classes sc WHERE sc.stamp_id = s.stamp_id AND sc.class_id = #{classId}
         )
         ORDER BY s.stamp_id
@@ -51,22 +48,22 @@
 
     <!-- 新しいスタンプ追加 -->
     <insert id="insert" parameterType="com.example.stampsysback.dto.StampManagementRequest" useGeneratedKeys="true" keyProperty="stampId">
-        INSERT INTO stamps (stamp_name, stamp_icon, stamp_color)
-        VALUES (#{stampName}, #{stampIcon}, #{stampColor})
+        INSERT INTO stamps (stamp_name, stamp_icon, stamp_color, hidden)
+        VALUES (#{stampName}, #{stampIcon}, #{stampColor}, FALSE)
     </insert>
 
     <!-- スタンプ論理削除 -->
     <!-- TRUE：削除 | FALSE：有効 -->
     <update id="delete" parameterType="int">
         UPDATE stamps
-        SET stamp_deleted = TRUE
+        SET hidden = TRUE
         WHERE stamp_id = #{stampId}
     </update>
 
     <!-- 【追加】スタンプ復元 -->
     <update id="restore" parameterType="int">
         UPDATE stamps
-        SET stamp_deleted = FALSE
+        SET hidden = FALSE
         WHERE stamp_id = #{stampId}
     </update>
 </mapper>
