@@ -7,6 +7,7 @@ public class UserDto {
     private String userName;
     private String email;
     private String role;
+    private String groupName;
     private OffsetDateTime createdAt;
 
     // 非表示フラグ
@@ -43,4 +44,11 @@ public class UserDto {
 
     public Integer getGroupId() { return groupId; }
     public void setGroupId(Integer groupId) { this.groupId = groupId; }
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
 }

@@ -3,7 +3,6 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.stampsysback.mapper.UserMapper">
 
-    <!-- resultMap の type を実際のクラスに合わせる -->
     <resultMap id="UserResult" type="com.example.stampsysback.entity.UserEntity">
         <id property="userId" column="user_id" />
         <result property="userName" column="user_name" />
@@ -19,18 +18,18 @@
         WHERE user_id = #{userId}
     </select>
 
-    <!-- メソッド名を existsById に合わせる -->
     <select id="existsById" parameterType="int" resultType="int">
         SELECT 1 FROM users WHERE user_id = #{userId} LIMIT 1
     </select>
 
-    <!-- 追加済みユーザー一覧 -->
     <select id="selectUsersInClass" resultType="com.example.stampsysback.dto.UserDto" parameterType="map">
-        SELECT u.user_id AS userId,
-               u.user_name AS userName,
-               u.email AS email
-        FROM users u
+        SELECT u.user_id     AS userId,
+        u.user_name   AS userName,
+        u.email       AS email,
+--         u.role        AS role,
+        g.group_name AS groupName  FROM users u
         JOIN users_classes uc ON u.user_id = uc.user_id
+        LEFT JOIN "group" g ON u.group_id = g.group_id
         WHERE uc.class_id = #{classId}
         AND u.role = 'STUDENT'
         ORDER BY u.user_name
@@ -42,25 +41,25 @@
         </if>
     </select>
 
-    <!-- 未追加ユーザー一覧 -->
     <select id="selectUsersNotInClass" resultType="com.example.stampsysback.dto.UserDto" parameterType="map">
-            SELECT u.user_id AS userId,
-    u.user_name AS userName,
-    u.email AS email
-    FROM users u
-    <!-- サブクエリが一行も帰らない場合true -->
-    <!-- このクラスにまだ追加されていないユーザーだけを取得 -->
-    WHERE NOT EXISTS (
+        SELECT u.user_id     AS userId,
+        u.user_name   AS userName,
+        u.email       AS email,
+        u.role        AS role,
+        g.group_name  AS groupName
+        FROM users u
+        LEFT JOIN "group" g ON u.group_id = g.group_id
+        WHERE NOT EXISTS (
         SELECT 1 FROM users_classes uc WHERE uc.user_id = u.user_id AND uc.class_id = #{classId}
-    )
-    AND u.role = 'STUDENT'
-    ORDER BY u.user_name
-    <if test="limit != null">
-        LIMIT #{limit}
-    </if>
-    <if test="offset != null">
-        OFFSET #{offset}
-    </if>
+        )
+        AND u.role = 'STUDENT'
+        ORDER BY u.user_name
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+        <if test="offset != null">
+            OFFSET #{offset}
+        </if>
     </select>
 
 </mapper>
