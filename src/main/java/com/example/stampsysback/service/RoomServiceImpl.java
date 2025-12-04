@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,16 @@ public class RoomServiceImpl implements RoomService{
     @Override
     public List<RoomEntity> selectByClassId(Integer classId){
         return roomMapper.selectByClassId(classId);
+    }
+
+    // 管理者のみ取得可能にする（Service 層での fail‑safe）
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<RoomEntity> selectHiddenByClassId(Integer classId) {
+        if (classId == null) {
+            throw new IllegalArgumentException("classId が指定されていません");
+        }
+        return roomMapper.selectHiddenByClassId(classId);
     }
 
     @Override
@@ -98,7 +109,7 @@ public class RoomServiceImpl implements RoomService{
         throw new DataAccessException("Failed to insert room (unexpected control flow)") {};
     }
 
-    //指定したroomIdをfalseに変更する
+    //指定したroomIdのacrtiveをfalseに変更する
     @Override
     public void closeRoom(Integer roomId) {
         if (roomId == null) {
@@ -125,7 +136,34 @@ public class RoomServiceImpl implements RoomService{
         }
     }
 
-    //指定したroomIdをfalseに変更する
+    //指定したroomIdのhiddenをfalseに変更して復元する
+    @Override
+    public void restoreRoom(Integer roomId) {
+        if (roomId == null) {
+            throw new IllegalArgumentException("roomId が指定されていません");
+        }
+        logger.debug("restoreRoom called for roomId={}", roomId);
+
+        // 存在チェック
+        RoomEntity existing = roomMapper.selectById(roomId);
+        logger.debug("existing room (selectById) result: {}", existing);
+
+        if (existing == null) {
+            throw new IllegalArgumentException("指定された room が見つかりません: " + roomId);
+        }
+        try {
+            int rows = roomMapper.updateHiddenById(roomId, Boolean.FALSE);
+            logger.debug("updateHiddenById (restore) affected rows: {}", rows);
+            if (rows == 0) {
+                throw new DataAccessException("hidden 更新が行われませんでした for roomId=" + roomId) {};
+            }
+        } catch (DataAccessException ex) {
+            logger.error("Failed to restore room {}", roomId, ex);
+            throw ex;
+        }
+    }
+
+    //指定したroomIdのhiddenをtrueに変更する
     @Override
     public void deleteRoom(Integer roomId) {
         if (roomId == null) {

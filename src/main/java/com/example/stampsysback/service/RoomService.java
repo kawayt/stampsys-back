@@ -11,6 +11,9 @@ public interface RoomService {
     // クラスIDに紐づくルーム一覧を取得
     List<RoomEntity> selectByClassId(Integer classId);
 
+    // 管理者用: hidden=true のルーム一覧を取得する
+    List<RoomEntity> selectHiddenByClassId(Integer classId);
+
     RoomDto insertRoom(RoomForm roomForm);
 
     Integer findClassIdByRoomId(Integer roomId);
@@ -20,6 +23,9 @@ public interface RoomService {
 
     //指定 roomId の hidden を true にしてルームを削除する。
     void deleteRoom(Integer roomId);
+
+    // 指定 roomId の hidden を false にしてルームを復元する。
+    void restoreRoom(Integer roomId);
 
     /**
      * 指定クラスに紐づく最新の active=true なルームの roomId を返す。

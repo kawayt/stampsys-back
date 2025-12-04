@@ -12,6 +12,7 @@
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
     </resultMap>
 
+    <!--hidden=falseを返す-->
     <select id="selectByClassId"
             parameterType="int"
             resultMap="RoomResult">
@@ -21,6 +22,17 @@
         ORDER BY room_id DESC
     </select>
 
+    <!--hidden=trueを返す-->
+    <select id="selectHiddenByClassId"
+            parameterType="int"
+            resultMap="RoomResult">
+        SELECT room_id, room_name, class_id, active, hidden, created_at
+        FROM rooms
+        WHERE class_id = #{classId} AND hidden = true
+        ORDER BY room_id DESC
+    </select>
+
+    <!--  selectByClassIdと何が違うのか  -->
     <select id="selectAllByClassId" parameterType="int" resultMap="RoomResult">
         SELECT room_id, room_name, class_id, active, hidden, created_at
         FROM rooms

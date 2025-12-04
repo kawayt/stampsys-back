@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/users/*/role").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/users/*/hidden").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers("/api/admin/db/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/rooms/*/restore").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
                         // フロントの /users ページ（静的）は ADMIN/TEACHER のみ
                         .requestMatchers("/users", "/users/**")

@@ -29,7 +29,7 @@ public class RoomController {
 
     // クラスに紐づくルーム一覧 + className を返す
     @GetMapping("/{classId}")
-    public ResponseEntity<ClassRoomsResponse> listByClass(@PathVariable Integer classId) {
+    public ResponseEntity<ClassRoomsResponse> listByClass(@PathVariable Integer classId,  @RequestParam(name = "hidden", required = false, defaultValue = "false") boolean hidden) {
         // classId からクラス情報を取得
         var classEntity = classService.selectClassById(classId);
         if (classEntity == null) {
@@ -45,7 +45,15 @@ public class RoomController {
         );
 
         // クラスに紐づくルーム一覧を取得 (Entity)
-        List<RoomEntity> roomEntities = roomService.selectByClassId(classId);
+        List<RoomEntity> roomEntities;
+
+        if (hidden) {
+            // 管理者用 hidden=true の一覧。Service 側でアクセス制御 (@PreAuthorize) が走る。
+            roomEntities = roomService.selectHiddenByClassId(classId);
+        } else {
+            // 既存の hidden=false の一覧
+            roomEntities = roomService.selectByClassId(classId);
+        }
 
         // Entity -> RoomDto 変換（RoomHelper を利用）
         List<RoomDto> roomDtos = roomEntities.stream()
@@ -63,7 +71,7 @@ public class RoomController {
                                        BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             // bindingResult.getAllErrors()はList<ObjectError>を返す
-            String msg = bindingResult.getAllErrors().get(0).getDefaultMessage();
+            String msg = bindingResult.getAllErrors().getFirst().getDefaultMessage();
             return ResponseEntity.badRequest().body(msg);
         }
         try {
@@ -111,6 +119,23 @@ public class RoomController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("データの整合性エラーが発生しました");
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ルームの削除に失敗しました");
+        }
+    }
+
+    // ルーム復元機能
+    @PatchMapping("/{roomId}/restore")
+    public ResponseEntity<?> restoreRoom(@PathVariable Integer roomId) {
+        try {
+            roomService.restoreRoom(roomId);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            // 指定された room が存在しないなど
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        } catch (org.springframework.dao.DuplicateKeyException ex) {
+            // ありえないはずだが安全対策
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("データの整合性エラーが発生しました");
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ルームの復元に失敗しました");
         }
     }
 }

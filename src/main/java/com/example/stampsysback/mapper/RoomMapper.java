@@ -11,6 +11,9 @@ public interface RoomMapper {
     // クラスIDに基づいてルームの情報を取得、RoomEntityのリストを返す
     List<RoomEntity> selectByClassId(@Param("classId") Integer classId);
 
+    // 管理者用: classId に紐づく hidden=true のルーム一覧を取得
+    List<RoomEntity> selectHiddenByClassId(@Param("classId") Integer classId);
+
     // ルームを作成
     int insert(RoomEntity roomEntity);
 
