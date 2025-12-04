@@ -12,11 +12,10 @@ public class ClassHelper {
         classEntity.setClassName(classForm.getClassName());
         classEntity.setCreatedAt(OffsetDateTime.now());
 
-        // 【追加】論理削除フラグを明示的に NULL に設定する
-        classEntity.setDeletedAt(null);
+        // 【修正】論理削除フラグを false に設定する
+        classEntity.setHidden(false);
 
         return classEntity;
     }
-
 
 }

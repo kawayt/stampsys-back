@@ -10,6 +10,6 @@ public class ClassEntity {
     private String className;
     private OffsetDateTime createdAt;
 
-    // 【追加】論理削除用のフィールド
-    private OffsetDateTime deletedAt; // 削除日時 (nullなら未削除)
+    // 【修正】論理削除用のフィールドを Boolean 型に変更
+    private Boolean hidden; // 削除フラグ (TRUE: 削除済み / FALSE: 未削除)
 }

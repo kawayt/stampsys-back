@@ -24,9 +24,9 @@ public interface ClassMapper {
     // classId で1件取得
     ClassEntity selectById(Integer classId);
 
-    // 論理削除
-    void softDelete(@Param("classId") Integer classId, @Param("deletedAt") OffsetDateTime deletedAt);
+    // 【追加】論理削除
+    void softDelete(@Param("classId") Integer classId);
 
-    // 復元
+    // 【追加】復元
     void restore(@Param("classId") Integer classId);
 }

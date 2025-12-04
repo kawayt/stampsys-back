@@ -1,6 +1,5 @@
 package com.example.stampsysback.service;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 import com.example.stampsysback.entity.ClassEntity;
@@ -35,13 +34,13 @@ public class ClassServiceImpl implements ClassService{
         return classMapper.selectById(classId);
     }
 
-    // 論理削除: deleted_at に現在時刻を設定
+    // 論理削除: hidden を FALSE に設定
     @Override
     public void deleteClass(Integer classId) {
-        classMapper.softDelete(classId, OffsetDateTime.now());
+        classMapper.softDelete(classId);
     }
 
-    // 復元: deleted_at を NULL に設定
+    // 復元: hidden を TRUE に設定
     @Override
     public void restoreClass(Integer classId) {
         classMapper.restore(classId);

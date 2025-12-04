@@ -2,15 +2,16 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.stampsysback.mapper.ClassMapper">
-    <!-- 【編集】クラス一覧を取得 -->
+    <!-- クラス一覧を取得 -->
     <select id="selectAll" resultType="com.example.stampsysback.entity.ClassEntity">
-        SELECT class_id, class_name, created_at, deleted_at FROM classes WHERE deleted_at IS NULL ORDER BY class_id;
+        SELECT class_id, class_name, created_at, hidden AS hidden  FROM classes
+        WHERE hidden = FALSE  ORDER BY class_id;
     </select>
 
     <!-- クラス作成 -->
     <insert id="insert">
-        INSERT INTO classes (class_id, class_name, created_at)
-        VALUES (#{classId}, #{className}, #{createdAt});
+        INSERT INTO classes (class_id, class_name, created_at, hidden)
+        VALUES (#{classId}, #{className}, #{createdAt}, FALSE);
     </insert>
 
     <select id="selectMaxId" resultType="int">
@@ -23,28 +24,29 @@
     </select>
 
     <!-- classId で 1 件取得 -->
-    <select id="selectById" parameterType="int"
-            resultType="com.example.stampsysback.entity.ClassEntity">
+    <select id="selectById" parameterType="int" resultType="com.example.stampsysback.entity.ClassEntity">
         SELECT
             class_id   AS classId,
             class_name AS className,
             created_at AS createdAt,
-            deleted_at AS deletedAt
-        FROM classes
+            hidden     AS hidden
+        FROM  classes
         WHERE class_id = #{classId}
-          AND deleted_at IS NULL
+          AND hidden = FALSE;
     </select>
 
     <!-- 論理削除 -->
+    <!-- TRUE：削除 | FALSE：有効 -->
     <update id="softDelete">
         UPDATE classes
-        SET deleted_at = #{deletedAt}
+        SET hidden = TRUE
         WHERE class_id = #{classId};
     </update>
+
     <!-- 復元機能 -->
     <update id="restore">
         UPDATE classes
-        SET deleted_at = NULL
+        SET hidden = FALSE
         WHERE class_id = #{classId};
     </update>
 
