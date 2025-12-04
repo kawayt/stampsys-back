@@ -24,5 +24,6 @@ public interface StampManagementMapper {
     // スタンプ論理削除
     void delete(@Param("stampId") int stampId);
 
-
+    // 【追加】スタンプ復元
+    void restore(@Param("stampId") int stampId);
 }

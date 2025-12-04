@@ -46,4 +46,9 @@ public class StampManagementController {
     public void deleteStamp(@PathVariable int stampId) {
         stampManagementMapper.delete(stampId);
     }
+
+    //【追加】スタンプ復元
+    @PostMapping("/restore/{stampId}")
+    public void restoreStamp(@PathVariable int stampId) { stampManagementMapper.restore(stampId); }
+
 }
