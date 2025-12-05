@@ -36,18 +36,10 @@ public class StampManagementEntity {
     @Column(name = "hidden")
     private Boolean hidden; // 論理削除
 
-    // 以下は集計や参照で便利なフィールド（DB にカラムがあればマッピングしておく）
-    @Column(name = "class_id")
-    private Long classId;
-
-    @Column(name = "room_id")
-    private Long roomId;
 
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 
     // assigned は DB に存在しない想定なら @Transient にする
     @Transient
