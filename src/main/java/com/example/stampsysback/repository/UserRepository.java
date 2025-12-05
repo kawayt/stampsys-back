@@ -4,6 +4,9 @@ import com.example.stampsysback.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying; // 追加
+import org.springframework.data.jpa.repository.Query;     // 追加
+import org.springframework.data.repository.query.Param;   // 追加
 
 import java.util.List;
 import java.util.Optional;
@@ -31,4 +34,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     // 既存: キーワード検索（実装済みがあればそのまま）
     // Page<User> searchVisible(String q, Pageable pageable); // もし存在するなら利用
+    @Modifying
+    @Query("UPDATE User u SET u.groupId = NULL WHERE u.groupId = :groupId")
+    void setGroupIdToNull(@Param("groupId") Integer groupId);
+
 }

@@ -1,8 +1,9 @@
 package com.example.stampsysback.controller;
 
-import com.example.stampsysback.controller.GroupController.GroupDto; // もし内部クラスなら
 import com.example.stampsysback.entity.GroupEntity;
 import com.example.stampsysback.repository.GroupRepository;
+import com.example.stampsysback.repository.UserRepository; // 追加
+import org.springframework.transaction.annotation.Transactional; // 追加
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,9 +15,12 @@ import java.util.stream.Collectors;
 public class GroupController {
 
     private final GroupRepository groupRepository;
+    private final UserRepository userRepository; // 追加
 
-    public GroupController(GroupRepository groupRepository) {
+    // コンストラクタで UserRepository も注入
+    public GroupController(GroupRepository groupRepository, UserRepository userRepository) {
         this.groupRepository = groupRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/api/groups")
@@ -26,27 +30,30 @@ public class GroupController {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * ★追加: 所属を追加するAPI
-     * POST /api/groups
-     * Body: { "groupName": "大阪校" }
-     */
     @PostMapping("/api/groups")
     public GroupDto createGroup(@RequestBody Map<String, String> body) {
         String name = body.get("groupName");
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("グループ名は必須です");
         }
-
         GroupEntity g = new GroupEntity();
         g.setGroupName(name);
-        // IDはDBの自動採番に任せる設定（@GeneratedValue）が必要です
         GroupEntity saved = groupRepository.save(g);
-
         return new GroupDto(saved.getGroupId(), saved.getGroupName());
     }
 
-    // DTOクラス定義 (既存のものがあればそれを使用)
+    @DeleteMapping("/api/groups/{groupId}")
+    @Transactional
+    public void deleteGroup(@PathVariable Integer groupId) {
+        // 1. このグループのユーザーを「未所属(NULL)」にする
+        // ※ UserRepository に setGroupIdToNull メソッドを追加しておく必要があります
+        userRepository.setGroupIdToNull(groupId);
+
+        // 2. グループを削除
+        groupRepository.deleteById(groupId);
+    }
+
+    // DTOクラス (そのまま)
     public static class GroupDto {
         private Integer groupId;
         private String groupName;
