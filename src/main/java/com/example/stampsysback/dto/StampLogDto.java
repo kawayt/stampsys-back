@@ -25,6 +25,10 @@ public class StampLogDto {
     private Integer stampColor;
     private Integer stampIcon;
 
+    //　group情報
+    private Integer groupId;
+    private String groupName;
+
     // 互換性のために id のアクセサを用意している場合は必要に応じて追加
     public Long getId() { return this.stampLogId; }
     public void setId(Long id) { this.stampLogId = id; }

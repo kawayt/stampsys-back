@@ -11,10 +11,13 @@
         <result column="stamp_id" property="stampId"/>
         <result column="sent_at" property="sentAt" jdbcType="TIMESTAMP"/>
         <result column="sender_name" property="senderName"/>
-        <!-- 追加: スタンプ定義からのメタ情報 -->
+        <!-- スタンプ定義からのメタ情報 -->
         <result column="stamp_name" property="stampName"/>
         <result column="stamp_color" property="stampColor"/>
         <result column="stamp_icon" property="stampIcon"/>
+        <!-- ユーザに紐づくグループ情報 -->
+        <result column="group_id" property="groupId"/>
+        <result column="group_name" property="groupName"/>
     </resultMap>
 
     <select id="findByRoomIdWithSender" resultMap="StampLogDtoMap" parameterType="map">
@@ -27,11 +30,15 @@
         u.user_name AS sender_name,
         s.stamp_name  AS stamp_name,
         s.stamp_color AS stamp_color,
-        s.stamp_icon  AS stamp_icon
+        s.stamp_icon  AS stamp_icon,
+        g.group_id    AS group_id,
+        g.group_name  AS group_name
         FROM stamp_logs sl
         LEFT JOIN users u ON sl.user_id = u.user_id
-        /* stamps テーブルが存在する前提で LEFT JOIN */
+        <!-- stamps テーブルが存在する前提で LEFT JOIN -->
         LEFT JOIN stamps s ON sl.stamp_id = s.stamp_id
+        <!-- PostgreSQL: 予約語に近いテーブル名 `group` はダブルクォートで囲む -->
+        LEFT JOIN "group" g ON u.group_id = g.group_id
         WHERE sl.room_id = #{roomId}
         <if test="startTs != null">
             AND sl.sent_at &gt;= #{startTs, jdbcType=TIMESTAMP}
@@ -46,7 +53,6 @@
         <if test="offset != null">
             OFFSET #{offset}
         </if>
-        ;
     </select>
 
 </mapper>
