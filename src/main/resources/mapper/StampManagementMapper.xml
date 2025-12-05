@@ -40,6 +40,7 @@
             s.stamp_name  AS stampName,
             s.stamp_icon  AS stampIcon,
             s.stamp_color AS stampColor,
+            s.user_id     AS userId,
             TRUE          AS assigned
         FROM stamps s
                  INNER JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
@@ -54,6 +55,7 @@
             s.stamp_name  AS stampName,
             s.stamp_icon  AS stampIcon,
             s.stamp_color AS stampColor,
+            s.user_id     AS userId,
             FALSE         AS assigned
         FROM stamps s
         WHERE s.hidden = FALSE  AND NOT EXISTS (
