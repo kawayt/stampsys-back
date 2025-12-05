@@ -21,4 +21,6 @@ public class StampActivityResponse {
     private List<OffsetDateTime> timeline;
     private List<Integer> totals;
     private List<StampSeries> series;
+
+    private String roomName;
 }

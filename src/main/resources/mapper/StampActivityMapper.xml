@@ -10,21 +10,21 @@
         intervalStr: String (例 '5 minutes') validate whitelist in controller/service
         startTs, endTs: java.time.OffsetDateTime (nullable)
       resultType="map" : returns Map<String,Object> per row with keys:
-        ts, stampId, cnt, total_cnt, pct
+        ts, stampId, cnt, total_cnt, pct, roomName
     -->
     <select id="findBucketedStampCounts" resultType="map">
         WITH bounds AS (
-            SELECT
-                COALESCE(#{startTs, jdbcType=TIMESTAMP}, date_trunc('minute', MIN(sent_at)))::timestamptz AS start_ts,
-                COALESCE(#{endTs,   jdbcType=TIMESTAMP}, date_trunc('minute', MAX(sent_at)))::timestamptz AS end_ts
-            FROM stamp_logs
-            WHERE room_id = #{roomId}
+        SELECT
+        COALESCE(#{startTs, jdbcType=TIMESTAMP}, date_trunc('minute', MIN(sent_at)))::timestamptz AS start_ts,
+        COALESCE(#{endTs,   jdbcType=TIMESTAMP}, date_trunc('minute', MAX(sent_at)))::timestamptz AS end_ts
+        FROM stamp_logs
+        WHERE room_id = #{roomId}
         ),
-             buckets AS (
-                 SELECT generate_series(start_ts, end_ts, #{intervalStr}::interval) AS bucket_start
-                 FROM bounds
-                 WHERE start_ts IS NOT NULL AND end_ts IS NOT NULL
-             ),
+        buckets AS (
+        SELECT generate_series(start_ts, end_ts, #{intervalStr}::interval) AS bucket_start
+        FROM bounds
+        WHERE start_ts IS NOT NULL AND end_ts IS NOT NULL
+        ),
         presses AS (
         -- 各バケットの開始時刻を基準に時間範囲で結合（実際に該当するログだけ取得）
         SELECT
@@ -43,26 +43,28 @@
             ]]>
         </if>
         ),
-            counts AS (
+        counts AS (
         SELECT bucket_start, stamp_id, COUNT(*) AS cnt
         FROM presses
         GROUP BY bucket_start, stamp_id
-            ),
-            totals AS (
+        ),
+        totals AS (
         SELECT bucket_start, SUM(cnt) AS total_cnt
         FROM counts
         GROUP BY bucket_start
-            )
+        )
         SELECT
-            b.bucket_start AS ts,
-            COALESCE(c.stamp_id, -1) AS stampId,
-            COALESCE(c.cnt, 0) AS cnt,
-            COALESCE(t.total_cnt, 0) AS total_cnt,
-            CASE WHEN COALESCE(t.total_cnt,0) = 0 THEN 0
-                 ELSE ROUND((c.cnt::numeric / t.total_cnt::numeric) * 100.0, 2) END AS pct
+        b.bucket_start AS ts,
+        COALESCE(c.stamp_id, -1) AS stampId,
+        COALESCE(c.cnt, 0) AS cnt,
+        COALESCE(t.total_cnt, 0) AS total_cnt,
+        CASE WHEN COALESCE(t.total_cnt,0) = 0 THEN 0
+        ELSE ROUND((c.cnt::numeric / t.total_cnt::numeric) * 100.0, 2) END AS pct,
+        -- 追加: room_name を各行に定数列として付与（コントローラ／サービスで利用可能）
+        (SELECT room_name FROM rooms WHERE room_id = #{roomId} LIMIT 1) AS roomName
         FROM buckets b
-                 LEFT JOIN counts c ON c.bucket_start = b.bucket_start
-                 LEFT JOIN totals t ON t.bucket_start = b.bucket_start
+        LEFT JOIN counts c ON c.bucket_start = b.bucket_start
+        LEFT JOIN totals t ON t.bucket_start = b.bucket_start
         ORDER BY b.bucket_start, stampId
         ;
     </select>
