@@ -12,6 +12,14 @@
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
     </resultMap>
 
+    <!-- room の name を返す -->
+    <select id="findRoomNameByRoomId" parameterType="int" resultType="string">
+        SELECT room_name
+        FROM rooms
+        WHERE room_id = #{roomId}
+            LIMIT 1
+    </select>
+
     <!--hidden=falseを返す-->
     <select id="selectByClassId"
             parameterType="int"

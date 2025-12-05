@@ -18,6 +18,9 @@ public interface RoomService {
 
     Integer findClassIdByRoomId(Integer roomId);
 
+    // 追加: ルーム名を取得する
+    String findRoomNameByRoomId(Integer roomId);
+
     //指定 roomId の active を false にしてルームを終了する。
     void closeRoom(Integer roomId);
 
