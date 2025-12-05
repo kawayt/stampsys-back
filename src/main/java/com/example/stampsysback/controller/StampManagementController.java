@@ -67,6 +67,13 @@ public class StampManagementController {
         stampManagementMapper.delete(stampId);
     }
 
+    // 【追加】管理者限定: 論理削除済みスタンプ一覧取得
+    @GetMapping("/deleted")
+    public List<StampManagementResponse> getDeletedStamps() {
+        logger.info("getDeletedStamps called (no admin check)");
+        return stampManagementMapper.selectDeleted();
+    }
+
     //【追加】スタンプ復元
     @PostMapping("/restore/{stampId}")
     public void restoreStamp(@PathVariable int stampId) { stampManagementMapper.restore(stampId); }

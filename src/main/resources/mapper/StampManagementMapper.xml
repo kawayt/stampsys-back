@@ -78,6 +78,20 @@
         WHERE stamp_id = #{stampId}
     </update>
 
+    <!-- 論理削除済みスタンプ一覧取得 -->
+    <select id="selectDeleted" parameterType="int" resultType="com.example.stampsysback.dto.StampManagementResponse">
+        SELECT
+            stamp_id    AS stampId,
+            stamp_name  AS stampName,
+            stamp_icon  AS stampIcon,
+            stamp_color AS stampColor,
+            user_id     AS userId,
+            FALSE       AS assigned
+        FROM stamps
+        WHERE hidden = TRUE
+        ORDER BY stamp_id;
+    </select>
+
     <!-- 【追加】スタンプ復元 -->
     <update id="restore" parameterType="int">
         UPDATE stamps
