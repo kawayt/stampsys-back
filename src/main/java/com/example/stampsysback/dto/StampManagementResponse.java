@@ -8,5 +8,6 @@ public class StampManagementResponse {
     private String  stampName;
     private Integer stampIcon;
     private Integer stampColor;
+    private Integer userId;
     private boolean assigned; // フロント用
 }

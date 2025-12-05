@@ -18,4 +18,6 @@ public class StampManagementRequest {
 
     @NotNull(message = "スタンプ色選択は必須です")
     private Integer stampColor;
+
+    private Integer userId;
 }

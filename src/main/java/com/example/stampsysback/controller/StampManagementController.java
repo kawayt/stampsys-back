@@ -5,6 +5,8 @@ import com.example.stampsysback.dto.StampManagementResponse;
 import com.example.stampsysback.mapper.StampManagementMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +17,7 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173")
 public class StampManagementController {
 
+    private static final Logger logger = LoggerFactory.getLogger(StampManagementController.class);
     private final StampManagementMapper stampManagementMapper;
 
     // スタンプ一覧取得（全件）
@@ -38,6 +41,12 @@ public class StampManagementController {
     // 新しいスタンプの追加
     @PostMapping
     public void addStamp(@RequestBody @Valid StampManagementRequest dto) {
+        // 簡易チェックとログ（userId が null かどうかをログに出します）
+        if (dto.getUserId() == null) {
+            logger.warn("addStamp called with null userId. stamps.user_id will be inserted as NULL.");
+        } else {
+            logger.info("addStamp called by userId={}", dto.getUserId());
+        }
         stampManagementMapper.insert(dto);
     }
 

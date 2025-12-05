@@ -48,8 +48,8 @@
 
     <!-- 新しいスタンプ追加 -->
     <insert id="insert" parameterType="com.example.stampsysback.dto.StampManagementRequest" useGeneratedKeys="true" keyProperty="stampId">
-        INSERT INTO stamps (stamp_name, stamp_icon, stamp_color, hidden)
-        VALUES (#{stampName}, #{stampIcon}, #{stampColor}, FALSE)
+        INSERT INTO stamps (stamp_name, stamp_icon, stamp_color, user_id, hidden)
+        VALUES (#{stampName}, #{stampIcon}, #{stampColor}, #{userId}, FALSE)
     </insert>
 
     <!-- スタンプ論理削除 -->
