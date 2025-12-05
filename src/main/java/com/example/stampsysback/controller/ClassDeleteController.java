@@ -32,7 +32,7 @@ public class ClassDeleteController {
      * 復元: PUT /api/classes/{classId}/restore
      * 指定されたIDのクラスを復元（論理削除を取り消し）します。
      */
-    @PutMapping("/{classId}/restore")
+    @PatchMapping("/{classId}/restore")
     public ResponseEntity<Void> restore(@PathVariable Integer classId){
         // サービス層の復元メソッドを呼び出す
         classService.restoreClass(classId);
