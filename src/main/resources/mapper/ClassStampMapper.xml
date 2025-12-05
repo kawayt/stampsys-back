@@ -11,7 +11,7 @@
             s.stamp_name    AS stampName,
             s.stamp_icon    AS stampIcon,
             s.stamp_color   AS stampColor,
-            s.stamp_deleted AS stampDeleted,
+            s.hidden AS hidden,
             -- ここで判定：中間テーブル(sc)があれば TRUE、なければ FALSE
             CASE
                 WHEN sc.class_id IS NOT NULL THEN TRUE
@@ -22,7 +22,7 @@
                  LEFT JOIN stamps_classes sc
                            ON s.stamp_id = sc.stamp_id
                                AND sc.class_id = #{classId}
-        WHERE s.stamp_deleted = FALSE
+        WHERE s.hidden = FALSE
         ORDER BY s.stamp_id
     </select>
 
@@ -33,10 +33,10 @@
             s.stamp_name    AS stampName,
             s.stamp_icon    AS stampIcon,
             s.stamp_color   AS stampColor,
-            s.stamp_deleted AS stampDeleted
+            s.hidden AS hidden
         FROM stamps s
         INNER JOIN stamps_classes sc ON s.stamp_id = sc.stamp_id
-        WHERE sc.class_id = #{classId} AND s.stamp_deleted = FALSE
+        WHERE sc.class_id = #{classId} AND s.hidden = FALSE
         ORDER BY s.stamp_id
     </select>
 
