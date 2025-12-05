@@ -29,4 +29,7 @@ public interface StampManagementMapper {
 
     // 【追加】スタンプ復元
     void restore(@Param("stampId") int stampId);
+
+    // 論理削除されたスタンプ一覧取得
+    List<StampManagementResponse> selectDeleted();
 }

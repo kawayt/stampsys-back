@@ -71,4 +71,16 @@ public class StampManagementController {
     @PostMapping("/restore/{stampId}")
     public void restoreStamp(@PathVariable int stampId) { stampManagementMapper.restore(stampId); }
 
+    // 管理者専用：論理削除されたスタンプ一覧取得
+    @GetMapping("/deleted")
+    public List<StampManagementResponse> getDeletedStamps(
+            @RequestHeader(name = "X-Admin", defaultValue = "false") boolean isAdmin) {
+        if (!isAdmin) {
+            logger.warn("Unauthorized access attempt to /deleted endpoint");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "管理者のみアクセス可能です");
+        }
+        logger.info("Admin accessed deleted stamps endpoint");
+        return stampManagementMapper.selectDeleted();
+    }
+
 }

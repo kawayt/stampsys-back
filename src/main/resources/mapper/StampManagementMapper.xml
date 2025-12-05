@@ -84,4 +84,18 @@
         SET hidden = FALSE
         WHERE stamp_id = #{stampId}
     </update>
+
+    <!-- 論理削除されたスタンプ一覧取得 -->
+    <select id="selectDeleted" resultType="com.example.stampsysback.dto.StampManagementResponse">
+        SELECT
+            stamp_id    AS stampId,
+            stamp_name  AS stampName,
+            stamp_icon  AS stampIcon,
+            stamp_color AS stampColor,
+            user_id     AS userId,
+            FALSE       AS assigned
+        FROM stamps
+        WHERE hidden = TRUE
+        ORDER BY stamp_id
+    </select>
 </mapper>
