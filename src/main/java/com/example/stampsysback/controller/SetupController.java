@@ -99,15 +99,47 @@ public class SetupController {
             conn.setAutoCommit(false);
             try (Statement stmt = conn.createStatement()) {
 
-                // Ensure sequences exist
+                // 1. シーケンスの作成 (group 用を追加)
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS users_user_id_seq");
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS stamp_logs_stamp_log_id_seq");
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS notes_note_id_seq");
+                stmt.execute("CREATE SEQUENCE IF NOT EXISTS group_group_id_seq"); // ★追加
 
-                // Ensure critical columns exist (ALTER TABLE ADD COLUMN IF NOT EXISTS)
-                stmt.execute("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS hidden boolean NOT NULL DEFAULT false");
+                // 2. テーブル作成
 
-                // Create function only if not exists (do not overwrite)
+                // group テーブル (★新規追加: users より先に作成する必要あり)
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.\"group\" (" +
+                        " group_id integer NOT NULL DEFAULT nextval('group_group_id_seq'::regclass)," +
+                        " group_name varchar(255)," +
+                        " CONSTRAINT group_pkey PRIMARY KEY (group_id)" +
+                        ")");
+
+                // users テーブル (★修正: group_id カラムと外部キー制約を追加)
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.users (" +
+                        " user_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass)," +
+                        " user_name varchar(255) NOT NULL," +
+                        " provider_user_id varchar(255) NOT NULL," +
+                        " email varchar(255) NOT NULL," +
+                        " role varchar(255) NOT NULL," +
+                        " created_at timestamptz NOT NULL," +
+                        " hidden boolean NOT NULL DEFAULT false," +
+                        " group_id integer," + // ★追加
+                        " CONSTRAINT users_pkey PRIMARY KEY (user_id)," +
+                        " CONSTRAINT uk_users_email UNIQUE (email)," +
+                        " CONSTRAINT uk_users_provider_user_id UNIQUE (provider_user_id)," +
+                        " CONSTRAINT users_role_check CHECK (role = ANY (ARRAY['ADMIN','STUDENT','TEACHER']))," +
+                        " CONSTRAINT fk_users_group FOREIGN KEY (group_id) REFERENCES public.\"group\" (group_id)" + // ★追加
+                        ")");
+                stmt.execute("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS group_id integer");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.classes ( class_id integer NOT NULL, class_name varchar(255) NOT NULL, created_at timestamptz NOT NULL, deleted_at timestamptz, CONSTRAINT classes_pkey PRIMARY KEY (class_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.rooms ( room_id integer NOT NULL, room_name varchar(255) NOT NULL, class_id integer NOT NULL, active boolean NOT NULL, created_at timestamptz NOT NULL, hidden boolean NOT NULL DEFAULT false, CONSTRAINT rooms_pkey PRIMARY KEY (room_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamp_logs ( user_id integer NOT NULL, room_id integer NOT NULL, stamp_id integer NOT NULL, sent_at timestamptz NOT NULL DEFAULT now(), stamp_log_id integer NOT NULL DEFAULT nextval('stamp_logs_stamp_log_id_seq'::regclass), CONSTRAINT stamp_logs_pkey PRIMARY KEY (stamp_log_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps ( stamp_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass), stamp_name varchar(255) NOT NULL, stamp_color integer NOT NULL, stamp_icon integer NOT NULL, stamp_deleted boolean NOT NULL DEFAULT false, CONSTRAINT stamps_pkey PRIMARY KEY (stamp_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps_classes ( stamp_id integer NOT NULL, class_id integer NOT NULL, CONSTRAINT stamps_classes_pkey PRIMARY KEY (stamp_id, class_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.users_classes ( user_id integer NOT NULL, class_id integer NOT NULL, CONSTRAINT users_classes_pkey PRIMARY KEY (class_id, user_id) )");
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.notes ( note_id integer NOT NULL DEFAULT nextval('notes_note_id_seq'::regclass), note_text character varying COLLATE pg_catalog.\"default\" NOT NULL, room_id integer NOT NULL, hidden boolean NOT NULL DEFAULT false, created_at timestamp with time zone NOT NULL DEFAULT now(), CONSTRAINT notes_pkey PRIMARY KEY (note_id) )");
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON public.users (email ASC)");
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_provider_user_id ON public.users (provider_user_id ASC)");
                 boolean funcExists = false;
                 try (PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM pg_proc WHERE proname = ?")) {
                     ps.setString(1, "enforce_max_admins");
@@ -127,23 +159,8 @@ public class SetupController {
                                     "$$;";
                     stmt.execute(createFunc);
                     logger.info("Created placeholder enforce_max_admins()");
-                } else {
-                    logger.info("enforce_max_admins() exists; not replacing.");
                 }
 
-                // Create tables if not exists
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.classes ( class_id integer NOT NULL, class_name varchar(255) NOT NULL, created_at timestamptz NOT NULL, deleted_at timestamptz, CONSTRAINT classes_pkey PRIMARY KEY (class_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.rooms ( room_id integer NOT NULL, room_name varchar(255) NOT NULL, class_id integer NOT NULL, active boolean NOT NULL, created_at timestamptz NOT NULL, hidden boolean NOT NULL DEFAULT false, CONSTRAINT rooms_pkey PRIMARY KEY (room_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamp_logs ( user_id integer NOT NULL, room_id integer NOT NULL, stamp_id integer NOT NULL, sent_at timestamptz NOT NULL DEFAULT now(), stamp_log_id integer NOT NULL DEFAULT nextval('stamp_logs_stamp_log_id_seq'::regclass), CONSTRAINT stamp_logs_pkey PRIMARY KEY (stamp_log_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps ( stamp_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass), stamp_name varchar(255) NOT NULL, stamp_color integer NOT NULL, stamp_icon integer NOT NULL, stamp_deleted boolean NOT NULL DEFAULT false, CONSTRAINT stamps_pkey PRIMARY KEY (stamp_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps_classes ( stamp_id integer NOT NULL, class_id integer NOT NULL, CONSTRAINT stamps_classes_pkey PRIMARY KEY (stamp_id, class_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.users ( user_name varchar(255) NOT NULL, provider_user_id varchar(255) NOT NULL, email varchar(255) NOT NULL, role varchar(255) NOT NULL, created_at timestamptz NOT NULL, user_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass), hidden boolean NOT NULL DEFAULT false, CONSTRAINT users_pkey PRIMARY KEY (user_id), CONSTRAINT uk_users_email UNIQUE (email), CONSTRAINT uk_users_provider_user_id UNIQUE (provider_user_id), CONSTRAINT users_role_check CHECK (role = ANY (ARRAY['ADMIN','STUDENT','TEACHER'])) )");
-                stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON public.users (email ASC)");
-                stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_provider_user_id ON public.users (provider_user_id ASC)");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.users_classes ( user_id integer NOT NULL, class_id integer NOT NULL, CONSTRAINT users_classes_pkey PRIMARY KEY (class_id, user_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.notes ( note_id integer NOT NULL DEFAULT nextval('notes_note_id_seq'::regclass), note_text character varying COLLATE pg_catalog.\"default\" NOT NULL, room_id integer NOT NULL, hidden boolean NOT NULL DEFAULT false, created_at timestamp with time zone NOT NULL DEFAULT now(), CONSTRAINT notes_pkey PRIMARY KEY (note_id) )");
-
-                // Triggers
                 stmt.execute("DROP TRIGGER IF EXISTS trg_enforce_max_admins ON public.users");
                 stmt.execute("CREATE TRIGGER trg_enforce_max_admins BEFORE INSERT OR UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.enforce_max_admins()");
 
