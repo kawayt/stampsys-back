@@ -12,6 +12,9 @@ public interface ClassMapper {
     // クラスの情報をすべて取得、ClassEntityのリストを返す
     List<ClassEntity> selectAll();
 
+    // 【追加】削除済みクラスを一覧取得
+    List<ClassEntity> selectDeletedClass();
+
     // クラスを作成、戻り値なし
     void insert(ClassEntity classEntity);
 
@@ -24,9 +27,9 @@ public interface ClassMapper {
     // classId で1件取得
     ClassEntity selectById(Integer classId);
 
-    // 【追加】論理削除
+    // 論理削除
     void softDelete(@Param("classId") Integer classId);
 
-    // 【追加】復元
+    // 復元
     void restore(@Param("classId") Integer classId);
 }

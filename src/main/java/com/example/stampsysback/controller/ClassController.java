@@ -27,6 +27,12 @@ public class ClassController {
         return classService.selectAllClass();
     }
 
+    // 【追加】削除済みクラスを一覧表示
+    @GetMapping("/deleted-list")
+    public List<ClassEntity> deletedList(){
+        return classService.selectDeletedClass();
+    }
+
     // クラス新規作成
     @PostMapping
     public ClassResponse create(@RequestBody @Valid ClassForm classForm){

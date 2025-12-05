@@ -4,8 +4,14 @@
 <mapper namespace="com.example.stampsysback.mapper.ClassMapper">
     <!-- クラス一覧を取得 -->
     <select id="selectAll" resultType="com.example.stampsysback.entity.ClassEntity">
-        SELECT class_id, class_name, created_at, hidden AS hidden  FROM classes
+        SELECT class_id AS classId, class_name AS className, created_at AS createdAt, hidden AS hidden FROM classes
         WHERE hidden = FALSE  ORDER BY class_id;
+    </select>
+
+    <!-- 【追加】削除済みクラスを一覧取得 -->
+    <select id="selectDeletedClass" resultType="com.example.stampsysback.entity.ClassEntity">
+        SELECT class_id AS classId, class_name AS className, created_at AS createdAt, hidden AS hidden FROM classes
+        WHERE hidden = TRUE ORDER BY class_id DESC;
     </select>
 
     <!-- クラス作成 -->

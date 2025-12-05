@@ -28,19 +28,25 @@ public class ClassServiceImpl implements ClassService{
         // return classEntity;
     }
 
+    // 【追加】削除済みクラスを一覧取得
+    @Override
+    public List<ClassEntity> selectDeletedClass() {
+        return classMapper.selectDeletedClass();
+    }
+
     // classId で 1 件取得
     @Override
     public ClassEntity selectClassById(Integer classId) {
         return classMapper.selectById(classId);
     }
 
-    // 論理削除: hidden を FALSE に設定
+    // 論理削除: hidden を TRUE に設定
     @Override
     public void deleteClass(Integer classId) {
         classMapper.softDelete(classId);
     }
 
-    // 復元: hidden を TRUE に設定
+    // 復元: hidden を FALSE に設定
     @Override
     public void restoreClass(Integer classId) {
         classMapper.restore(classId);

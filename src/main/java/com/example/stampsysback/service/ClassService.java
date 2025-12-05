@@ -8,6 +8,9 @@ public interface ClassService {
     List<ClassEntity> selectAllClass();
     void insertClass(ClassEntity classEntity);
 
+    // 【追加】削除済みクラスを一覧取得
+    List<ClassEntity> selectDeletedClass();
+
     // classId を指定して1件取得
     ClassEntity selectClassById(Integer classId);
 
