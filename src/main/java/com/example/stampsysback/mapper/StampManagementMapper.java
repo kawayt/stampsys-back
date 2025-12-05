@@ -12,6 +12,9 @@ public interface StampManagementMapper {
     // スタンプ一覧取得
     List<StampManagementResponse> findAll();
 
+    // 自分が作成したスタンプ一覧取得
+    List<StampManagementResponse> selectByUserId(@Param("userId") Integer userId);
+
     // 指定クラスに紐づくスタンプ
     List<StampManagementResponse> selectStampsByClassId(@Param("classId") Integer classId);
 

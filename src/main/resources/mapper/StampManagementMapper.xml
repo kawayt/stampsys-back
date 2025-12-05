@@ -12,9 +12,25 @@
             stamp_name  AS stampName,
             stamp_icon  AS stampIcon,
             stamp_color AS stampColor,
+            user_id     AS userId,
             FALSE AS assigned
         FROM stamps
         WHERE hidden = FALSE  ORDER BY stamp_id;
+    </select>
+
+    <!-- 自分が作成したスタンプのみ取得 -->
+    <select id="selectByUserId" parameterType="int" resultType="com.example.stampsysback.dto.StampManagementResponse">
+        SELECT
+            stamp_id    AS stampId,
+            stamp_name  AS stampName,
+            stamp_icon  AS stampIcon,
+            stamp_color AS stampColor,
+            user_id     AS userId,
+            FALSE       AS assigned
+        FROM stamps
+        WHERE hidden = FALSE
+          AND user_id = #{userId}
+        ORDER BY stamp_id;
     </select>
 
     <!-- 追加: 指定クラスに紐づく（assigned）スタンプ一覧 -->

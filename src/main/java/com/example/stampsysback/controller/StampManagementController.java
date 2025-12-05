@@ -7,7 +7,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -24,6 +26,15 @@ public class StampManagementController {
     @GetMapping
     public List<StampManagementResponse> getAllStamps() {
         return stampManagementMapper.findAll();
+    }
+
+    // 自分が作成したスタンプ一覧取得
+    @GetMapping("/mine")
+    public List<StampManagementResponse> getMyStamps(@RequestParam(required = false) Integer userId) {
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId パラメータを指定してください");
+        }
+        return stampManagementMapper.selectByUserId(userId);
     }
 
     // 追加: 指定クラスに紐づくスタンプ（割当済み）
