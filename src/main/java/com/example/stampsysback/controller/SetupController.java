@@ -103,15 +103,15 @@ public class SetupController {
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS users_user_id_seq");
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS stamp_logs_stamp_log_id_seq");
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS notes_note_id_seq");
-                stmt.execute("CREATE SEQUENCE IF NOT EXISTS group_group_id_seq"); // ★追加
+                stmt.execute("CREATE SEQUENCE IF NOT EXISTS groups_group_id_seq");
 
                 // 2. テーブル作成
 
                 // group テーブル (★新規追加: users より先に作成する必要あり)
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.\"group\" (" +
-                        " group_id integer NOT NULL DEFAULT nextval('group_group_id_seq'::regclass)," +
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.groups (" +
+                        " group_id integer NOT NULL DEFAULT nextval('groups_group_id_seq'::regclass)," +
                         " group_name varchar(255)," +
-                        " CONSTRAINT group_pkey PRIMARY KEY (group_id)" +
+                        " CONSTRAINT groups_pkey PRIMARY KEY (group_id)" +
                         ")");
 
                 // users テーブル (★修正: group_id カラムと外部キー制約を追加)
@@ -128,7 +128,7 @@ public class SetupController {
                         " CONSTRAINT uk_users_email UNIQUE (email)," +
                         " CONSTRAINT uk_users_provider_user_id UNIQUE (provider_user_id)," +
                         " CONSTRAINT users_role_check CHECK (role = ANY (ARRAY['ADMIN','STUDENT','TEACHER']))," +
-                        " CONSTRAINT fk_users_group FOREIGN KEY (group_id) REFERENCES public.\"group\" (group_id)" + // ★追加
+                        " CONSTRAINT fk_users_group FOREIGN KEY (group_id) REFERENCES public.groups (group_id)" +
                         ")");
                 stmt.execute("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS group_id integer");
                 stmt.execute("CREATE TABLE IF NOT EXISTS public.classes ( class_id integer NOT NULL, class_name varchar(255) NOT NULL, created_at timestamptz NOT NULL, deleted_at timestamptz, CONSTRAINT classes_pkey PRIMARY KEY (class_id) )");

@@ -38,7 +38,7 @@
         <!-- stamps テーブルが存在する前提で LEFT JOIN -->
         LEFT JOIN stamps s ON sl.stamp_id = s.stamp_id
         <!-- PostgreSQL: 予約語に近いテーブル名 `group` はダブルクォートで囲む -->
-        LEFT JOIN "group" g ON u.group_id = g.group_id
+        LEFT JOIN groups g ON u.group_id = g.group_id
         WHERE sl.room_id = #{roomId}
         <if test="startTs != null">
             AND sl.sent_at &gt;= #{startTs, jdbcType=TIMESTAMP}
