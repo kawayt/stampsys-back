@@ -41,4 +41,5 @@ public interface UserService {
      * @return userId -> displayName のマップ（見つからない userId はマップに含めない or null 値にするかは実装で統一）
      */
     Map<Integer, String> getUserNamesByIds(Collection<Integer> userIds);
+    Map<Integer, Long> getUserCountsByGroup(); // ▼ 追加
 }

@@ -32,6 +32,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Modifying
     @Query("UPDATE User u SET u.groupId = NULL WHERE u.groupId = :groupId")
     void setGroupIdToNull(@Param("groupId") Integer groupId);
+    @Query("SELECT u.groupId, COUNT(u) FROM User u WHERE u.hidden = false GROUP BY u.groupId")
+    List<Object[]> countUsersByGroup();
 
     /**
      * hidden=false 固定。role/groupId/keyword を任意で指定可能な検索。

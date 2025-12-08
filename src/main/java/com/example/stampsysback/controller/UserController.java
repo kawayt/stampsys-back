@@ -87,6 +87,10 @@ public class UserController {
         }
         return userService.updateHidden(id, hidden);
     }
+    @GetMapping("/api/users/counts/groups")
+    public Map<Integer, Long> getGroupCounts() {
+        return userService.getUserCountsByGroup();
+    }
 
     // 内部クラス: リクエストボディ用
     public static class RoleUpdateRequest {

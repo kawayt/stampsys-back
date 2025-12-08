@@ -184,6 +184,7 @@ public class UserServiceImpl implements UserService {
         return result;
     }
 
+
     // ---------- DTO 変換 ----------
     private UserDto toDto(User u) {
         UserDto d = new UserDto();
@@ -195,5 +196,20 @@ public class UserServiceImpl implements UserService {
         d.setHidden(u.isHidden());
         d.setGroupId(u.getGroupId());
         return d;
+    }
+    @Override
+    public Map<Integer, Long> getUserCountsByGroup() {
+        List<Object[]> results = userRepository.countUsersByGroup();
+        Map<Integer, Long> counts = new HashMap<>();
+
+        for (Object[] result : results) {
+            Integer groupId = (Integer) result[0];
+            Long count = (Long) result[1];
+
+            // groupId が null の場合は -1 (未所属) として扱うなどの調整が可能
+            // ここではそのままマップし、nullキーも許容します
+            counts.put(groupId, count);
+        }
+        return counts;
     }
 }
