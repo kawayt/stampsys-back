@@ -99,7 +99,7 @@ public class SetupController {
             conn.setAutoCommit(false);
             try (Statement stmt = conn.createStatement()) {
 
-                // 1. シーケンスの作成 (group 用を追加)
+                // 1. シーケンスの作成
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS users_user_id_seq");
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS stamp_logs_stamp_log_id_seq");
                 stmt.execute("CREATE SEQUENCE IF NOT EXISTS notes_note_id_seq");
@@ -107,14 +107,14 @@ public class SetupController {
 
                 // 2. テーブル作成
 
-                // group テーブル (★新規追加: users より先に作成する必要あり)
+                // groups テーブル
                 stmt.execute("CREATE TABLE IF NOT EXISTS public.groups (" +
                         " group_id integer NOT NULL DEFAULT nextval('groups_group_id_seq'::regclass)," +
                         " group_name varchar(255)," +
                         " CONSTRAINT groups_pkey PRIMARY KEY (group_id)" +
                         ")");
 
-                // users テーブル (★修正: group_id カラムと外部キー制約を追加)
+                // users テーブル
                 stmt.execute("CREATE TABLE IF NOT EXISTS public.users (" +
                         " user_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass)," +
                         " user_name varchar(255) NOT NULL," +
@@ -123,23 +123,90 @@ public class SetupController {
                         " role varchar(255) NOT NULL," +
                         " created_at timestamptz NOT NULL," +
                         " hidden boolean NOT NULL DEFAULT false," +
-                        " group_id integer," + // ★追加
+                        " group_id integer," +
                         " CONSTRAINT users_pkey PRIMARY KEY (user_id)," +
                         " CONSTRAINT uk_users_email UNIQUE (email)," +
                         " CONSTRAINT uk_users_provider_user_id UNIQUE (provider_user_id)," +
                         " CONSTRAINT users_role_check CHECK (role = ANY (ARRAY['ADMIN','STUDENT','TEACHER']))," +
                         " CONSTRAINT fk_users_group FOREIGN KEY (group_id) REFERENCES public.groups (group_id)" +
                         ")");
+                // 既存 users へのカラム追加
                 stmt.execute("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS group_id integer");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.classes ( class_id integer NOT NULL, class_name varchar(255) NOT NULL, created_at timestamptz NOT NULL, deleted_at timestamptz, CONSTRAINT classes_pkey PRIMARY KEY (class_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.rooms ( room_id integer NOT NULL, room_name varchar(255) NOT NULL, class_id integer NOT NULL, active boolean NOT NULL, created_at timestamptz NOT NULL, hidden boolean NOT NULL DEFAULT false, CONSTRAINT rooms_pkey PRIMARY KEY (room_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamp_logs ( user_id integer NOT NULL, room_id integer NOT NULL, stamp_id integer NOT NULL, sent_at timestamptz NOT NULL DEFAULT now(), stamp_log_id integer NOT NULL DEFAULT nextval('stamp_logs_stamp_log_id_seq'::regclass), CONSTRAINT stamp_logs_pkey PRIMARY KEY (stamp_log_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps ( stamp_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass), stamp_name varchar(255) NOT NULL, stamp_color integer NOT NULL, stamp_icon integer NOT NULL, stamp_deleted boolean NOT NULL DEFAULT false, CONSTRAINT stamps_pkey PRIMARY KEY (stamp_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps_classes ( stamp_id integer NOT NULL, class_id integer NOT NULL, CONSTRAINT stamps_classes_pkey PRIMARY KEY (stamp_id, class_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.users_classes ( user_id integer NOT NULL, class_id integer NOT NULL, CONSTRAINT users_classes_pkey PRIMARY KEY (class_id, user_id) )");
-                stmt.execute("CREATE TABLE IF NOT EXISTS public.notes ( note_id integer NOT NULL DEFAULT nextval('notes_note_id_seq'::regclass), note_text character varying COLLATE pg_catalog.\"default\" NOT NULL, room_id integer NOT NULL, hidden boolean NOT NULL DEFAULT false, created_at timestamp with time zone NOT NULL DEFAULT now(), CONSTRAINT notes_pkey PRIMARY KEY (note_id) )");
+
+                // classes テーブル (★修正: deleted_at -> hidden)
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.classes (" +
+                        " class_id integer NOT NULL," +
+                        " class_name varchar(255) NOT NULL," +
+                        " created_at timestamptz NOT NULL," +
+                        " hidden boolean NOT NULL DEFAULT false," +
+                        " CONSTRAINT classes_pkey PRIMARY KEY (class_id)" +
+                        ")");
+                // 既存 classes へのカラム追加
+                stmt.execute("ALTER TABLE public.classes ADD COLUMN IF NOT EXISTS hidden boolean NOT NULL DEFAULT false");
+
+                // rooms テーブル
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.rooms (" +
+                        " room_id integer NOT NULL," +
+                        " room_name varchar(255) NOT NULL," +
+                        " class_id integer NOT NULL," +
+                        " active boolean NOT NULL," +
+                        " created_at timestamptz NOT NULL," +
+                        " hidden boolean NOT NULL DEFAULT false," +
+                        " CONSTRAINT rooms_pkey PRIMARY KEY (room_id)" +
+                        ")");
+
+                // stamp_logs テーブル
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamp_logs (" +
+                        " user_id integer NOT NULL," +
+                        " room_id integer NOT NULL," +
+                        " stamp_id integer NOT NULL," +
+                        " sent_at timestamptz NOT NULL DEFAULT now()," +
+                        " stamp_log_id integer NOT NULL DEFAULT nextval('stamp_logs_stamp_log_id_seq'::regclass)," +
+                        " CONSTRAINT stamp_logs_pkey PRIMARY KEY (stamp_log_id)" +
+                        ")");
+
+                // stamps テーブル (★修正: user_id を追加)
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps (" +
+                        " stamp_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass)," + // 注意: stamps用のシーケンスがない場合 users用が使われていますが、必要なら修正してください
+                        " stamp_name varchar(255) NOT NULL," +
+                        " stamp_color integer NOT NULL," +
+                        " stamp_icon integer NOT NULL," +
+                        " hidden boolean NOT NULL DEFAULT false," +
+                        " user_id integer," + // ★追加
+                        " CONSTRAINT stamps_pkey PRIMARY KEY (stamp_id)" +
+                        ")");
+                // 既存 stamps へのカラム追加
+                stmt.execute("ALTER TABLE public.stamps ADD COLUMN IF NOT EXISTS user_id integer");
+
+                // stamps_classes テーブル
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.stamps_classes (" +
+                        " stamp_id integer NOT NULL," +
+                        " class_id integer NOT NULL," +
+                        " CONSTRAINT stamps_classes_pkey PRIMARY KEY (stamp_id, class_id)" +
+                        ")");
+
+                // users_classes テーブル
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.users_classes (" +
+                        " user_id integer NOT NULL," +
+                        " class_id integer NOT NULL," +
+                        " CONSTRAINT users_classes_pkey PRIMARY KEY (class_id, user_id)" +
+                        ")");
+
+                // notes テーブル
+                stmt.execute("CREATE TABLE IF NOT EXISTS public.notes (" +
+                        " note_id integer NOT NULL DEFAULT nextval('notes_note_id_seq'::regclass)," +
+                        " note_text character varying COLLATE pg_catalog.\"default\" NOT NULL," +
+                        " room_id integer NOT NULL," +
+                        " hidden boolean NOT NULL DEFAULT false," +
+                        " created_at timestamp with time zone NOT NULL DEFAULT now()," +
+                        " CONSTRAINT notes_pkey PRIMARY KEY (note_id)" +
+                        ")");
+
+                // インデックス作成
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON public.users (email ASC)");
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_provider_user_id ON public.users (provider_user_id ASC)");
+
+                // 関数とトリガー (enforce_max_admins)
                 boolean funcExists = false;
                 try (PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM pg_proc WHERE proname = ?")) {
                     ps.setString(1, "enforce_max_admins");
@@ -181,7 +248,7 @@ public class SetupController {
         }
     }
 
-    // 簡易 JDBC URL パーサ（jdbc:postgresql://host:port/dbname 形式を想定）
+    // 簡易 JDBC URL パーサ
     private Map<String, Object> parseJdbcUrl(String jdbcUrl) {
         Map<String, Object> out = new HashMap<>();
         out.put("host", null);
