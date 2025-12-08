@@ -7,6 +7,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 import java.time.*;
@@ -18,16 +20,21 @@ import java.util.stream.Collectors;
  * Relies on StampActivityMapper.findBucketedStampCounts to return rows with:
  *   ts (timestamp), stampId (int), cnt (int), total_cnt (int), pct (numeric)
  * Also queries stamps table to attach stamp metadata.
+ * Minimal changes made: inject RoomService and set roomName on StampActivityResponse before returning.
  */
 @Service
 public class StampActivityServiceImpl implements StampActivityService {
 
+    private static final Logger logger = LoggerFactory.getLogger(StampActivityServiceImpl.class);
+
     private final StampActivityMapper mapper;
     private final NamedParameterJdbcTemplate jdbc;
+    private final RoomService roomService; // 追加: Room 名取得用サービス
 
-    public StampActivityServiceImpl(StampActivityMapper mapper, NamedParameterJdbcTemplate jdbc) {
+    public StampActivityServiceImpl(StampActivityMapper mapper, NamedParameterJdbcTemplate jdbc, RoomService roomService) {
         this.mapper = mapper;
         this.jdbc = jdbc;
+        this.roomService = roomService;
     }
 
     @Override
@@ -40,6 +47,13 @@ public class StampActivityServiceImpl implements StampActivityService {
             empty.setTimeline(Collections.emptyList());
             empty.setTotals(Collections.emptyList());
             empty.setSeries(Collections.emptyList());
+            // 追加: roomName が取れればセット（冗長だが安全）
+            try {
+                String rn = roomService.findRoomNameByRoomId(roomId.intValue());
+                empty.setRoomName(rn);
+            } catch (Exception ex) {
+                logger.debug("could not fetch roomName for empty response, roomId={}", roomId, ex);
+            }
             return empty;
         }
 
@@ -64,6 +78,12 @@ public class StampActivityServiceImpl implements StampActivityService {
             empty.setTimeline(Collections.emptyList());
             empty.setTotals(Collections.emptyList());
             empty.setSeries(Collections.emptyList());
+            try {
+                String rn = roomService.findRoomNameByRoomId(roomId.intValue());
+                empty.setRoomName(rn);
+            } catch (Exception ex) {
+                logger.debug("could not fetch roomName for empty response (after timeline empty), roomId={}", roomId, ex);
+            }
             return empty;
         }
 
@@ -163,6 +183,15 @@ public class StampActivityServiceImpl implements StampActivityService {
         resp.setTimeline(timeline);
         resp.setTotals(totalsList);
         resp.setSeries(seriesList);
+
+        // 追加: roomName を取得して DTO にセット（例外が発生しても既存のレスポンスを壊さない）
+        try {
+            String roomName = roomService.findRoomNameByRoomId(roomId.intValue());
+            resp.setRoomName(roomName);
+        } catch (Exception ex) {
+            logger.debug("could not fetch or set roomName for roomId={}", roomId, ex);
+        }
+
         return resp;
     }
 

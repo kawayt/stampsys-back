@@ -25,6 +25,8 @@ public interface RoomMapper {
 
     Integer findClassIdByRoomId(@Param("roomId") Integer roomId);
 
+    String findRoomNameByRoomId(@Param("roomId") Integer roomId);
+
     //指定 roomId の active を更新する
     int updateActiveById(@Param("roomId") Integer roomId, @Param("active") Boolean active);
 

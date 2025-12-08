@@ -36,6 +36,11 @@ public class RoomServiceImpl implements RoomService{
     }
 
     @Override
+    public String findRoomNameByRoomId(Integer roomId) {
+        return roomMapper.findRoomNameByRoomId(roomId);
+    }
+
+    @Override
     public List<RoomEntity> selectByClassId(Integer classId){
         return roomMapper.selectByClassId(classId);
     }

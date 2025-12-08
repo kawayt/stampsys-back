@@ -31,12 +31,8 @@ public class StampDisplayController {
     }
 
     /**
-     * ルームに紐づくスタンプ一覧を返す。
+     * ルームに紐づくスタンプ一覧を返す。加えて room_name を含める。
      * GET /api/rooms/{roomId}/stamps
-     * - 認証済みであることを前提とし、ルームが属する class_id に
-     *   対してユーザーが所属している（users_classes に存在）か、
-     *   またはユーザーが TEACHER/ADMIN の場合にのみスタンプ一覧を返します。
-     * - それ以外は 403 とエラーメッセージを返します。
      */
     @GetMapping("/rooms/{roomId}/stamps")
     public ResponseEntity<?> getStampsByRoom(
@@ -48,7 +44,7 @@ public class StampDisplayController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "ログインが必要です"));
         }
 
-        // resolve current user's DB id (userId) via AuthorizationService helper
+        // resolve current user's DB id (userId)
         Integer userId = authorizationService.resolveCurrentUserId(principal);
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "ユーザー情報が見つかりません"));
@@ -66,8 +62,20 @@ public class StampDisplayController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "ルームの参加資格がありません"));
         }
 
-        // authorized -> return stamps
+        // authorized -> fetch room name and stamps
+        String roomName = roomService.findRoomNameByRoomId(roomId); // 追加: RoomService に実装
+        if (roomName == null) {
+            // room が見つからない（安全策）
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "指定されたルームが見つかりません"));
+        }
+
         List<StampDto> stamps = stampDisplayService.findStampsByRoomId(roomId);
-        return ResponseEntity.ok(stamps);
+
+        // 返却フォーマット: { roomId, roomName, stamps: [...] }
+        return ResponseEntity.ok(Map.of(
+                "roomId", roomId,
+                "roomName", roomName,
+                "stamps", stamps
+        ));
     }
 }
