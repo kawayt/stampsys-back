@@ -106,10 +106,20 @@ public class UserServiceImpl implements UserService {
         User u = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
         String prevRole = u.getRole();
-        if (newRole != null && "ADMIN".equalsIgnoreCase(newRole)) {
+
+        // 現在の役割がADMINで新役割がADMINでない場合、確認
+        if ("ADMIN".equalsIgnoreCase(prevRole) && !"ADMIN".equalsIgnoreCase(newRole)) {
+            long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
+            if (adminCount <= 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "管理者の人数は最低1人必要です。最後の表示中の管理者を削除または降格できません。");
+            }
+        }
+
+        // 新しい役割がADMINの場合、管理者数が2人を越えないように確認
+        if ("ADMIN".equalsIgnoreCase(newRole)) {
             long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
             if (!"ADMIN".equalsIgnoreCase(prevRole) && adminCount >= 2) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "管理者権限は最大２人までです");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "管理者権限は最大2人まで設定可能です。");
             }
         }
         u.setRole(newRole);
@@ -123,6 +133,15 @@ public class UserServiceImpl implements UserService {
     public UserDto updateHidden(Integer userId, boolean hidden) {
         User u = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
+
+        // 非表示かつ現在の役割が ADMIN の場合、チェックを追加
+        if (hidden && "ADMIN".equalsIgnoreCase(u.getRole())) {
+            long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
+            if (adminCount <= 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "管理者の人数は最低1人必要です。最後の表示中の管理者を非表示にはできません。");
+            }
+        }
+
         u.setHidden(hidden);
         userRepository.save(u);
         return toDto(u);
@@ -184,7 +203,6 @@ public class UserServiceImpl implements UserService {
         return result;
     }
 
-
     // ---------- DTO 変換 ----------
     private UserDto toDto(User u) {
         UserDto d = new UserDto();
@@ -197,6 +215,7 @@ public class UserServiceImpl implements UserService {
         d.setGroupId(u.getGroupId());
         return d;
     }
+
     @Override
     public Map<Integer, Long> getUserCountsByGroup() {
         List<Object[]> results = userRepository.countUsersByGroup();
@@ -205,9 +224,6 @@ public class UserServiceImpl implements UserService {
         for (Object[] result : results) {
             Integer groupId = (Integer) result[0];
             Long count = (Long) result[1];
-
-            // groupId が null の場合は -1 (未所属) として扱うなどの調整が可能
-            // ここではそのままマップし、nullキーも許容します
             counts.put(groupId, count);
         }
         return counts;
