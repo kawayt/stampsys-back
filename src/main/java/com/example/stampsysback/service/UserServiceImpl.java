@@ -24,6 +24,9 @@ public class UserServiceImpl implements UserService {
         this.userRepository = userRepository;
     }
 
+    // 管理者ロールの上限（DB側制約と合わせる）
+    private static final int MAX_ADMIN = 5;
+
     // ---------- 一覧（非ページング） ----------
     @Override
     public List<UserDto> listUsers(String q) {
@@ -115,11 +118,14 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // 新しい役割がADMINの場合、管理者数が2人を越えないように確認
+        // 新しい役割がADMINの場合、管理者数が MAX_ADMIN 人を越えないように確認
         if ("ADMIN".equalsIgnoreCase(newRole)) {
             long adminCount = userRepository.countByRoleAndHiddenFalse("ADMIN");
-            if (!"ADMIN".equalsIgnoreCase(prevRole) && adminCount >= 2) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "管理者権限は最大2人まで設定可能です。");
+            if (!"ADMIN".equalsIgnoreCase(prevRole) && adminCount >= MAX_ADMIN) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "管理者権限は最大" + MAX_ADMIN + "人まで設定可能です。"
+                );
             }
         }
         u.setRole(newRole);
