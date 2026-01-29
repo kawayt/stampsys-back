@@ -14,6 +14,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
+import org.springframework.boot.web.servlet.server.CookieSameSiteSupplier;
 
 import java.util.Arrays;
 import java.util.List;
@@ -66,6 +67,9 @@ public class SecurityConfig {
                         // 管理者／教員のみが参照できるスタンプ一覧（エンドポイントが /api/stamps の場合）
                         .requestMatchers(HttpMethod.GET, "/api/stamps", "/api/stamps/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_TEACHER", "ADMIN", "TEACHER")
+
+                        // 追加: ルーム内のスタンプ一覧取得は認証が必要
+                        .requestMatchers(HttpMethod.GET, "/api/rooms/*/stamps").authenticated()
 
                         // 管理者のみの更新／管理系
                         .requestMatchers("/api/users/hidden", "/api/users/hidden/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
@@ -132,6 +136,15 @@ public class SecurityConfig {
                 new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
         handler.setPostLogoutRedirectUri(postLogoutRedirectUri);
         return handler;
+    }
+
+    /**
+     * Cross-SiteでのCookie利用（Vercel -> Render）を可能にするため、
+     * CookieのSameSite属性をNoneに設定する。
+     */
+    @Bean
+    public CookieSameSiteSupplier applicationCookieSameSiteSupplier() {
+        return CookieSameSiteSupplier.ofNone();
     }
 
     @Bean
