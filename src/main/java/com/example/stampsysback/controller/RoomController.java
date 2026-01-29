@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
-@CrossOrigin(origins = "http://localhost:5173")
 public class RoomController {
     // DI サービスに依存
     private final RoomService roomService;

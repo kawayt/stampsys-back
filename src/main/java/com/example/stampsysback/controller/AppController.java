@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
  * - クライアントへ返すユーザー情報は最小限の DTO (UserDto) に変換して不要なフィールドを含めないようにしています。
  */
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 public class AppController {
 
     private final UserRepository userRepository;

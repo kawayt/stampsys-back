@@ -14,7 +14,6 @@ import org.springframework.web.server.ResponseStatusException;
 //POSTリクエストを受け取り、StampSendServiceを呼び出すコントローラー
 @RestController
 @RequestMapping("/api/stamp-send")
-@CrossOrigin(origins = "http://localhost:5173")
 public class StampSendController {
 
     private static final Logger logger = LoggerFactory.getLogger(StampSendController.class);

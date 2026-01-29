@@ -12,7 +12,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/classes")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
 public class ActiveRoomController {
 
     private static final Logger logger = LoggerFactory.getLogger(ActiveRoomController.class);

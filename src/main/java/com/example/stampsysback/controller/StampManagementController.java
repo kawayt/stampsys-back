@@ -16,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/stamp-management")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
 public class StampManagementController {
 
     private static final Logger logger = LoggerFactory.getLogger(StampManagementController.class);

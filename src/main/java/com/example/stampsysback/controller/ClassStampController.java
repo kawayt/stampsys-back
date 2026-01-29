@@ -11,7 +11,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/class-stamps")
-@CrossOrigin(origins = "http://localhost:5173")
 public class ClassStampController {
 
     private final ClassStampMapper classStampMapper;

@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @RestController
 @RequestMapping("/api/rooms")
-@CrossOrigin(origins = "http://localhost:5173")
 public class StampSummaryController {
 
     private final StampSummaryService service;
