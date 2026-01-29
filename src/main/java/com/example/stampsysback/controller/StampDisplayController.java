@@ -34,20 +34,7 @@ public class StampDisplayController {
      * GET /api/rooms/{roomId}/stamps
      */
     @GetMapping("/rooms/{roomId}/stamps")
-    public ResponseEntity<?> getStampsByRoom(
-            @PathVariable Integer roomId,
-            @AuthenticationPrincipal OAuth2User principal) {
-
-        // require authentication
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "ログインが必要です"));
-        }
-
-        // resolve current user's DB id (userId)
-        Integer userId = authorizationService.resolveCurrentUserId(principal);
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "ユーザー情報が見つかりません"));
-        }
+    public ResponseEntity<?> getStampsByRoom(@PathVariable Integer roomId) {
 
         // find classId for the room
         Integer classId = roomService.findClassIdByRoomId(roomId);
@@ -55,11 +42,6 @@ public class StampDisplayController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "指定されたルームが見つかりません"));
         }
 
-        // authorization: must be member of class OR teacher/admin
-        boolean allowed = authorizationService.isUserInClass(userId, classId) || authorizationService.isTeacherOrAdmin(userId);
-        if (!allowed) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "ルームの参加資格がありません"));
-        }
 
         // authorized -> fetch room name and stamps
         String roomName = roomService.findRoomNameByRoomId(roomId); // 追加: RoomService に実装

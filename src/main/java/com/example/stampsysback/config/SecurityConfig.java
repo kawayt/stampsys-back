@@ -68,8 +68,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/stamps", "/api/stamps/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_TEACHER", "ADMIN", "TEACHER")
 
-                        // 追加: ルーム内のスタンプ一覧取得は認証が必要
-                        .requestMatchers(HttpMethod.GET, "/api/rooms/*/stamps").authenticated()
 
                         // 管理者のみの更新／管理系
                         .requestMatchers("/api/users/hidden", "/api/users/hidden/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
