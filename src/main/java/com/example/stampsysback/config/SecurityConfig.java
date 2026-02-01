@@ -30,13 +30,13 @@ public class SecurityConfig {
     @Value("${app.oauth2-registration-id:microsoft}")
     private String oauth2RegistrationId;
 
-    @Value("${app.post-logout-redirect-uri:http://localhost:5173}")
+    @Value("${app.post-logout-redirect-uri}")
     private String postLogoutRedirectUri;
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    @Value("${app.cors.allowed-origins}")
     private String allowedOriginsProperty;
 
-    @Value("${app.frontend.base-url:http://localhost:5173}")
+    @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
 
     public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository,
