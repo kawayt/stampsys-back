@@ -90,6 +90,7 @@ public class SecurityConfig {
                                 "/api/stamp-send",
                                 "/api/rooms/*/stamp-summary",
                                 "/api/notes",
+                                "/api/notes/*/hidden",
                                 "/api/stamp-management/**",
                                 "/api/rooms/*/close",
                                 "/api/rooms/*/delete",
